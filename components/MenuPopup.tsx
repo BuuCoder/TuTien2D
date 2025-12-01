@@ -147,10 +147,10 @@ const MenuPopup = () => {
                             textAlign: 'center',
                             textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                         }}>
-                            Menu
+                            {activeMenu.menu.length > 0 ? 'Menu' : 'Nhiệm vụ'}
                         </h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                            {activeMenu.menu.map((category) => (
+                            {activeMenu.menu.length > 0 ? activeMenu.menu.map((category) => (
                                 <button
                                     key={category.id}
                                     onClick={() => setSelectedCategory(category.id)}
@@ -179,6 +179,71 @@ const MenuPopup = () => {
                                 >
                                     {category.name}
                                 </button>
+                            )) : activeMenu.quests?.map((quest) => (
+                                <div
+                                    key={quest.id}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        justifyContent: 'space-between',
+                                        padding: '20px',
+                                        background: 'rgba(255, 255, 255, 0.6)',
+                                        backdropFilter: 'blur(10px)',
+                                        borderRadius: '12px',
+                                        border: '1px solid rgba(255, 255, 255, 0.5)',
+                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = 'translateX(4px)';
+                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.15)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = 'translateX(0)';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', gap: '14px', flex: 1 }}>
+                                        <span style={{ fontSize: '36px' }}>{quest.image}</span>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: '600', color: '#2c3e50', fontSize: '16px', marginBottom: '6px' }}>
+                                                {quest.name}
+                                            </div>
+                                            <div style={{ color: '#7f8c8d', fontSize: '13px', lineHeight: '1.5', marginBottom: '8px' }}>
+                                                {quest.description}
+                                            </div>
+                                            <div style={{ color: '#f39c12', fontSize: '14px', fontWeight: '600' }}>
+                                                🏆 Phần thưởng: {quest.reward} vàng
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleBuyItem({ ...quest, price: 0 })}
+                                        style={{
+                                            padding: '10px 20px',
+                                            background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.9), rgba(245, 124, 0, 0.9))',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            fontWeight: '600',
+                                            fontSize: '14px',
+                                            boxShadow: '0 4px 12px rgba(255, 152, 0, 0.3)',
+                                            transition: 'all 0.2s',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.transform = 'scale(1.05)';
+                                            e.currentTarget.style.boxShadow = '0 6px 16px rgba(255, 152, 0, 0.4)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = 'scale(1)';
+                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 152, 0, 0.3)';
+                                        }}
+                                    >
+                                        Nhận nhiệm vụ
+                                    </button>
+                                </div>
                             ))}
                         </div>
                     </>

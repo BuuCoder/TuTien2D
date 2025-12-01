@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useGameStore } from '@/lib/store';
+import { saveGameState } from '@/lib/saveGameState';
 import GameMap from './GameMap';
 import Instructions from './UI';
 import Joystick from './Joystick';
@@ -15,7 +16,14 @@ import ChatBox from './ChatBox';
 import FriendRequestPopup from './FriendRequestPopup';
 
 const GameContent = () => {
-    const { user } = useGameStore();
+    const { user, currentMapId } = useGameStore();
+
+    // Lưu game state khi chuyển map
+    useEffect(() => {
+        if (user) {
+            saveGameState();
+        }
+    }, [currentMapId, user]);
 
     if (!user) {
         return <LoginPage />;

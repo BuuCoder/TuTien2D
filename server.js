@@ -83,7 +83,8 @@ app.prepare().then(() => {
                 return;
             }
 
-            if (channels[channelId].size >= MAX_PLAYERS_PER_CHANNEL) {
+            // Nếu đang ở trong kênh này rồi thì không cần check full
+            if (currentChannel !== channelId && channels[channelId].size >= MAX_PLAYERS_PER_CHANNEL) {
                 socket.emit('channel_full', { channelId });
                 return;
             }
@@ -101,6 +102,7 @@ app.prepare().then(() => {
                 id: socket.id,
                 userId: userId,
                 username: username,
+                mapId: playerData.mapId || 'map1', // Default to map1
                 ...playerData
             });
 
@@ -116,6 +118,7 @@ app.prepare().then(() => {
                 id: socket.id,
                 userId: userId,
                 username: username,
+                mapId: playerData.mapId || 'map1',
                 ...playerData
             });
 
@@ -128,12 +131,18 @@ app.prepare().then(() => {
 
             const player = channels[currentChannel].get(socket.id);
             if (player) {
-                const updatedPlayer = { ...player, ...data };
+                // Include mapId in player data
+                const updatedPlayer = { 
+                    ...player, 
+                    ...data,
+                    mapId: data.mapId || player.mapId || 'map1' // Default to map1 if not provided
+                };
                 channels[currentChannel].set(socket.id, updatedPlayer);
 
                 socket.to(`channel_${currentChannel}`).emit('player_moved', {
                     id: socket.id,
-                    ...data
+                    ...data,
+                    mapId: updatedPlayer.mapId
                 });
             }
         });
@@ -165,8 +174,25 @@ app.prepare().then(() => {
         });
 
         // Friend requests
-        socket.on('send_friend_request', ({ toUserId, toUsername }) => {
+        socket.on('send_friend_request', async ({ toUserId, toUsername }) => {
             if (!userId || !username) return;
+
+            // Kiểm tra xem đã là bạn bè chưa
+            try {
+                const [existing] = await db.query(
+                    `SELECT * FROM friends 
+                     WHERE ((user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?))
+                     AND status = 'accepted'`,
+                    [userId, toUserId, toUserId, userId]
+                );
+
+                if (existing.length > 0) {
+                    socket.emit('friend_request_error', { message: `Bạn và ${toUsername} đã là bạn bè!` });
+                    return;
+                }
+            } catch (err) {
+                console.error('Error checking friendship:', err);
+            }
 
             const targetSession = userSessions.get(toUserId);
             if (targetSession) {
@@ -180,6 +206,8 @@ app.prepare().then(() => {
                 });
 
                 console.log(`[Friend Request] ${username} -> User ${toUserId}`);
+            } else {
+                socket.emit('friend_request_error', { message: `${toUsername} không trực tuyến hoặc không tìm thấy!` });
             }
         });
 

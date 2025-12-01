@@ -14,7 +14,16 @@ interface MenuItem {
     name: string;
     price: number;
     image?: string;
+    description?: string;
   }[];
+}
+
+interface Quest {
+  id: string;
+  name: string;
+  description: string;
+  reward: number;
+  image: string;
 }
 
 interface Notification {
@@ -30,6 +39,7 @@ interface OtherPlayer {
   action: 'idle' | 'run';
   userId?: number;
   username?: string;
+  mapId?: string;
 }
 
 interface ChatMessage {
@@ -49,6 +59,8 @@ interface User {
 }
 
 interface GameState {
+  currentMapId: string;
+  setCurrentMapId: (mapId: string) => void;
   playerPosition: { x: number; y: number };
   setPlayerPosition: (x: number, y: number) => void;
   playerDirection: 'up' | 'down' | 'left' | 'right';
@@ -66,8 +78,8 @@ interface GameState {
   npcMessages: NPCMessage[];
   addNPCMessage: (npcId: string, message: string) => void;
   clearNPCMessage: (npcId: string) => void;
-  activeMenu: { npcId: string; menu: MenuItem[] } | null;
-  setActiveMenu: (menu: { npcId: string; menu: MenuItem[] } | null) => void;
+  activeMenu: { npcId: string; menu: MenuItem[]; quests?: Quest[] } | null;
+  setActiveMenu: (menu: { npcId: string; menu: MenuItem[]; quests?: Quest[] } | null) => void;
   notification: Notification | null;
   setNotification: (notification: Notification | null) => void;
   targetPosition: { x: number; y: number } | null;
@@ -93,8 +105,28 @@ interface GameState {
 }
 
 export const useGameStore = create<GameState>((set) => ({
+  currentMapId: 'map1',
+  setCurrentMapId: (mapId) => {
+    set({ currentMapId: mapId });
+    // Lưu map hiện tại vào localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tutien2d_currentMap', mapId);
+    }
+  },
   playerPosition: { x: 400, y: 300 },
-  setPlayerPosition: (x, y) => set({ playerPosition: { x, y } }),
+  setPlayerPosition: (x, y) => {
+    set({ playerPosition: { x, y } });
+    // Lưu vị trí người chơi vào localStorage (throttled)
+    // Sử dụng debounce để tránh lưu quá nhiều
+    if (typeof window !== 'undefined') {
+      if ((window as any).savePositionTimeout) {
+        clearTimeout((window as any).savePositionTimeout);
+      }
+      (window as any).savePositionTimeout = setTimeout(() => {
+        localStorage.setItem('tutien2d_playerPosition', JSON.stringify({ x, y }));
+      }, 1000); // Lưu sau 1 giây không di chuyển
+    }
+  },
   playerDirection: 'down',
   setPlayerDirection: (direction) => set({ playerDirection: direction }),
   playerAction: 'idle',
@@ -170,8 +202,9 @@ export const useGameStore = create<GameState>((set) => ({
   })),
 }));
 
-// Khôi phục user từ localStorage khi khởi động
+// Khôi phục dữ liệu từ localStorage khi khởi động
 if (typeof window !== 'undefined') {
+  // Khôi phục user
   const savedUser = localStorage.getItem('tutien2d_user');
   if (savedUser) {
     try {
@@ -180,6 +213,24 @@ if (typeof window !== 'undefined') {
     } catch (e) {
       console.error('Failed to parse saved user:', e);
       localStorage.removeItem('tutien2d_user');
+    }
+  }
+
+  // Khôi phục map hiện tại
+  const savedMap = localStorage.getItem('tutien2d_currentMap');
+  if (savedMap) {
+    useGameStore.setState({ currentMapId: savedMap });
+  }
+
+  // Khôi phục vị trí người chơi
+  const savedPosition = localStorage.getItem('tutien2d_playerPosition');
+  if (savedPosition) {
+    try {
+      const position = JSON.parse(savedPosition);
+      useGameStore.setState({ playerPosition: position });
+    } catch (e) {
+      console.error('Failed to parse saved position:', e);
+      localStorage.removeItem('tutien2d_playerPosition');
     }
   }
 }

@@ -11,6 +11,10 @@ interface ChatMessage {
     timestamp: number;
 }
 
+import styles from './ChatBox.module.css';
+
+// ... (giữ nguyên imports và interface)
+
 const ChatBox = () => {
     const { socket, currentChannel, user, chatMessages, addChatMessage } = useGameStore();
     const [inputMessage, setInputMessage] = useState('');
@@ -60,21 +64,7 @@ const ChatBox = () => {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                style={{
-                    position: 'fixed',
-                    bottom: '20px',
-                    left: '20px',
-                    padding: '12px 20px',
-                    backgroundColor: '#667eea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    zIndex: 9999,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                }}
+                className={styles.toggleButton}
             >
                 💬 Chat
             </button>
@@ -82,29 +72,9 @@ const ChatBox = () => {
     }
 
     return (
-        <div style={{
-            position: 'fixed',
-            bottom: '20px',
-            left: '20px',
-            width: '350px',
-            height: '450px',
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            borderRadius: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            zIndex: 9999,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-            border: '1px solid rgba(255,255,255,0.1)'
-        }}>
+        <div className={styles.chatContainer}>
             {/* Header */}
-            <div style={{
-                padding: '12px 16px',
-                borderBottom: '1px solid rgba(255,255,255,0.1)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                backgroundColor: 'rgba(102, 126, 234, 0.2)'
-            }}>
+            <div className={styles.header}>
                 <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
                     💬 Chat - Kênh {currentChannel || '?'}
                 </div>
@@ -124,23 +94,15 @@ const ChatBox = () => {
             </div>
 
             {/* Messages */}
-            <div style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-            }}>
+            <div className={styles.messages}>
                 {chatMessages.map((msg, idx) => (
                     <div
                         key={idx}
+                        className={styles.messageItem}
                         style={{
-                            padding: '8px 12px',
                             backgroundColor: msg.userId === user?.id
                                 ? 'rgba(102, 126, 234, 0.3)'
                                 : 'rgba(255, 255, 255, 0.05)',
-                            borderRadius: '8px',
                             borderLeft: msg.userId === user?.id
                                 ? '3px solid #667eea'
                                 : '3px solid #555'
@@ -167,12 +129,7 @@ const ChatBox = () => {
             </div>
 
             {/* Input */}
-            <div style={{
-                padding: '12px',
-                borderTop: '1px solid rgba(255,255,255,0.1)',
-                display: 'flex',
-                gap: '8px'
-            }}>
+            <div className={styles.inputArea}>
                 <input
                     type="text"
                     value={inputMessage}
@@ -180,29 +137,15 @@ const ChatBox = () => {
                     onKeyPress={handleKeyPress}
                     placeholder="Nhập tin nhắn..."
                     maxLength={200}
-                    style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        backgroundColor: 'rgba(255,255,255,0.1)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        borderRadius: '6px',
-                        color: 'white',
-                        fontSize: '13px',
-                        outline: 'none'
-                    }}
+                    className={styles.input}
                 />
                 <button
                     onClick={handleSend}
                     disabled={!inputMessage.trim()}
+                    className={styles.sendButton}
                     style={{
-                        padding: '8px 16px',
                         backgroundColor: inputMessage.trim() ? '#667eea' : '#555',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
                         cursor: inputMessage.trim() ? 'pointer' : 'not-allowed',
-                        fontSize: '13px',
-                        fontWeight: 'bold'
                     }}
                 >
                     Gửi

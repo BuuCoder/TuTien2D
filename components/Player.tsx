@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '@/lib/store';
+import { MAPS } from '@/lib/gameData';
 
 const SPEED = 5;
-const MAP_WIDTH = 1200;
-const MAP_HEIGHT = 900;
 const TARGET_THRESHOLD = 10; // Distance to consider target reached
 
 const Player = () => {
     const {
+        currentMapId,
         playerPosition,
         setPlayerPosition,
         joystickDirection,
@@ -18,17 +18,26 @@ const Player = () => {
         playerDirection: direction,
         setPlayerDirection: setDirection,
         playerAction,
-        setPlayerAction
+        setPlayerAction,
+        user
     } = useGameStore();
 
-    // We can keep isMoving local as it's derived from dx/dy, but we need to update store action
-    const [isMoving, setIsMoving] = useState(false);
+    const currentMap = useMemo(() => {
+        return MAPS[currentMapId] || MAPS['map1'];
+    }, [currentMapId]);
+
+
 
     const keysPressed = useRef<Set<string>>(new Set());
     const animationFrameId = useRef<number | null>(null);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Không di chuyển nếu đang gõ trong input hoặc textarea
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                return;
+            }
             keysPressed.current.add(e.key.toLowerCase());
         };
 
@@ -79,7 +88,6 @@ const Player = () => {
             }
 
             if (dx !== 0 || dy !== 0) {
-                setIsMoving(true);
 
                 // Normalize diagonal movement
                 if (dx !== 0 && dy !== 0) {
@@ -92,8 +100,8 @@ const Player = () => {
                 let newY = playerPosition.y + dy;
 
                 // Clamp to map boundaries
-                newX = Math.max(32, Math.min(newX, MAP_WIDTH - 32));
-                newY = Math.max(32, Math.min(newY, MAP_HEIGHT - 32));
+                newX = Math.max(32, Math.min(newX, currentMap.width - 32));
+                newY = Math.max(32, Math.min(newY, currentMap.height - 32));
 
                 setPlayerPosition(newX, newY);
 
@@ -103,8 +111,6 @@ const Player = () => {
                 } else {
                     setDirection(dy > 0 ? 'down' : 'up');
                 }
-            } else {
-                setIsMoving(false);
             }
 
             // Update action in store
@@ -125,13 +131,12 @@ const Player = () => {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [playerPosition, setPlayerPosition, joystickDirection, targetPosition, setTargetPosition, setDirection, setPlayerAction, playerAction]);
+    }, [playerPosition, setPlayerPosition, joystickDirection, targetPosition, setTargetPosition, setDirection, setPlayerAction, playerAction, currentMap.width, currentMap.height]);
 
-    const action = isMoving ? 'run' : 'idle';
     // When idle, always use down_idle regardless of direction
-    const gifPath = action === 'idle'
+    const gifPath = playerAction === 'idle'
         ? `/assets/knight/idle/down_idle.gif`
-        : `/assets/knight/${action}/${direction}_${action}.gif`;
+        : `/assets/knight/${playerAction}/${direction}_${playerAction}.gif`;
 
     return (
         <div
@@ -160,7 +165,7 @@ const Player = () => {
                 fontWeight: 'bold',
                 pointerEvents: 'none'
             }}>
-                Tiểu Hiệp
+                {user?.username || 'Tiểu Hiệp'}
             </div>
         </div>
     );

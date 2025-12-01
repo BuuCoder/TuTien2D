@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '@/lib/store';
 
 interface NPCProps {
@@ -11,8 +11,6 @@ interface NPCProps {
 }
 
 const INTERACTION_DISTANCE = 80;
-const MAP_WIDTH = 1200;
-const MAP_HEIGHT = 900;
 
 const NPC_SPRITES: Record<string, string> = {
     'merchant': '/assets/npc/business/down_idle.gif',
@@ -29,21 +27,14 @@ const NPC_NAMES: Record<string, string> = {
 };
 
 const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
-    const { playerPosition, setNearbyNPCId, setIsInteracting, addNPCMessage, npcMessages, setActiveMenu, cameraOffset } = useGameStore();
+    const { playerPosition, setNearbyNPCId, setIsInteracting, addNPCMessage, npcMessages, setActiveMenu } = useGameStore();
     const wasInRangeRef = useRef(false);
-    const [viewportSize, setViewportSize] = React.useState({ width: 0, height: 0 });
+    const hasGreetedRef = useRef(false); // Track if already greeted this approach
+    const autoGreetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    React.useEffect(() => {
-        const updateViewport = () => {
-            setViewportSize({ width: window.innerWidth, height: window.innerHeight });
-        };
-        updateViewport();
-        window.addEventListener('resize', updateViewport);
-        return () => window.removeEventListener('resize', updateViewport);
-    }, []);
+    const npcMessage = useMemo(() => npcMessages.find(m => m.npcId === id), [npcMessages, id]);
 
-    const npcMessage = npcMessages.find(m => m.npcId === id);
-
+    // Auto-greet when player approaches
     useEffect(() => {
         const distance = Math.sqrt(
             Math.pow(playerPosition.x - x, 2) + Math.pow(playerPosition.y - y, 2)
@@ -53,14 +44,62 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
         if (inRange && !wasInRangeRef.current) {
             setNearbyNPCId(id);
             wasInRangeRef.current = true;
+
+            // Only greet if haven't greeted yet for this approach
+            if (!hasGreetedRef.current) {
+                console.log(`[NPC ${id}] Player approached, showing greeting`);
+                hasGreetedRef.current = true;
+
+                // Auto-display greeting message
+                if (autoGreetTimeoutRef.current) {
+                    clearTimeout(autoGreetTimeoutRef.current);
+                }
+                
+                // Fetch greeting message
+                fetch('/api/interact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        npcId: id,
+                        action: 'greet',
+                        timestamp: new Date().toISOString(),
+                    }),
+                })
+                .then(res => res.json())
+                .then(data => {
+                    console.log(`[NPC ${id}] Greeting response:`, data);
+                    if (data.success && data.message) {
+                        addNPCMessage(id, data.message);
+                        autoGreetTimeoutRef.current = setTimeout(() => {
+                            useGameStore.getState().clearNPCMessage(id);
+                        }, 5000);
+                    }
+                })
+                .catch(err => console.error(`[NPC ${id}] Auto-greet failed:`, err));
+            }
+
         } else if (!inRange && wasInRangeRef.current) {
             const currentNearby = useGameStore.getState().nearbyNPCId;
             if (currentNearby === id) {
                 setNearbyNPCId(null);
             }
             wasInRangeRef.current = false;
+            hasGreetedRef.current = false; // Reset greeting flag when player leaves
+            
+            // Clear message and timeout when player leaves
+            useGameStore.getState().clearNPCMessage(id);
+            if (autoGreetTimeoutRef.current) {
+                clearTimeout(autoGreetTimeoutRef.current);
+                autoGreetTimeoutRef.current = null;
+            }
         }
-    }, [playerPosition, x, y, id, setNearbyNPCId]);
+
+        return () => {
+            if (autoGreetTimeoutRef.current) {
+                clearTimeout(autoGreetTimeoutRef.current);
+            }
+        };
+    }, [playerPosition.x, playerPosition.y, x, y, id, setNearbyNPCId, addNPCMessage]);
 
     useEffect(() => {
         const handleKeyDown = async (e: KeyboardEvent) => {
@@ -91,8 +130,12 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
                         if (data.success && data.message) {
                             addNPCMessage(id, data.message);
 
-                            if (data.menu) {
-                                setActiveMenu({ npcId: id, menu: data.menu });
+                            if (data.menu || data.quests) {
+                                setActiveMenu({ 
+                                    npcId: id, 
+                                    menu: data.menu || [], 
+                                    quests: data.quests || [] 
+                                });
                             }
 
                             setTimeout(() => {
@@ -112,37 +155,37 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [x, y, id, setIsInteracting, addNPCMessage, setActiveMenu]);
 
-    // Calculate centering offset
-    const centeringOffsetX = Math.max(0, (viewportSize.width - MAP_WIDTH) / 2);
-    const centeringOffsetY = Math.max(0, (viewportSize.height - MAP_HEIGHT) / 2);
 
-    // Calculate screen position (world position - camera offset + centering offset)
-    const screenX = x - cameraOffset.x + centeringOffsetX;
-    const screenY = y - cameraOffset.y + centeringOffsetY;
 
     return (
-        <>
+        <div
+            style={{
+                position: 'absolute',
+                left: x,
+                top: y,
+                width: '64px',
+                height: '64px',
+                transform: 'translate(-50%, -50%)',
+                zIndex: Math.floor(y),
+            }}
+        >
             {/* NPC Sprite */}
             <div
                 style={{
-                    position: 'absolute',
-                    left: x,
-                    top: y,
-                    width: '64px',
-                    height: '64px',
+                    width: '100%',
+                    height: '100%',
                     backgroundImage: `url(${NPC_SPRITES[type]})`,
                     backgroundSize: 'contain',
                     backgroundRepeat: 'no-repeat',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: Math.floor(y),
                 }}
             >
+                {/* NPC Name */}
                 <div style={{
                     position: 'absolute',
                     top: '-20px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    color: '#ffeb3b', // Yellow for NPCs
+                    color: '#ffeb3b',
                     textShadow: '1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black',
                     fontSize: '12px',
                     whiteSpace: 'nowrap',
@@ -151,61 +194,62 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
                 }}>
                     {NPC_NAMES[type] || type}
                 </div>
-            </div>
 
-            {/* Message Bubble - Fixed to screen position */}
-            {npcMessage && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        left: screenX,
-                        top: screenY - 60,
-                        transform: 'translateX(-50%)',
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        color: '#333',
-                        padding: '8px 12px',
-                        borderRadius: '12px',
-                        fontSize: '13px',
-                        fontFamily: 'sans-serif',
-                        maxWidth: '200px',
-                        textAlign: 'center',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                        border: '2px solid #4CAF50',
-                        zIndex: 10000,
-                        animation: 'fadeIn 0.3s ease-out',
-                        pointerEvents: 'none',
-                    }}
-                >
-                    {npcMessage.message}
+                {/* Message Bubble */}
+                {npcMessage && (
                     <div
                         style={{
                             position: 'absolute',
-                            bottom: '-8px',
                             left: '50%',
+                            bottom: '70px',
                             transform: 'translateX(-50%)',
-                            width: '0',
-                            height: '0',
-                            borderLeft: '8px solid transparent',
-                            borderRight: '8px solid transparent',
-                            borderTop: '8px solid #4CAF50',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            color: '#333',
+                            padding: '8px 12px',
+                            borderRadius: '12px',
+                            fontSize: '13px',
+                            fontFamily: 'sans-serif',
+                            width: '200px',
+                            textAlign: 'center',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                            border: '2px solid #4CAF50',
+                            zIndex: 10000,
+                            pointerEvents: 'none',
+                            whiteSpace: 'normal',
+                            wordWrap: 'break-word',
                         }}
-                    />
-                    <div
-                        style={{
-                            position: 'absolute',
-                            bottom: '-6px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            width: '0',
-                            height: '0',
-                            borderLeft: '7px solid transparent',
-                            borderRight: '7px solid transparent',
-                            borderTop: '7px solid rgba(255, 255, 255, 0.95)',
-                        }}
-                    />
-                </div>
-            )}
-        </>
+                    >
+                        {npcMessage.message}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                bottom: '-8px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: '0',
+                                height: '0',
+                                borderLeft: '8px solid transparent',
+                                borderRight: '8px solid transparent',
+                                borderTop: '8px solid #4CAF50',
+                            }}
+                        />
+                        <div
+                            style={{
+                                position: 'absolute',
+                                bottom: '-6px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: '0',
+                                height: '0',
+                                borderLeft: '7px solid transparent',
+                                borderRight: '7px solid transparent',
+                                borderTop: '7px solid rgba(255, 255, 255, 0.95)',
+                            }}
+                        />
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };
 

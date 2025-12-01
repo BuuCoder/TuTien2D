@@ -6,7 +6,7 @@ import { useGameStore } from '@/lib/store';
 const NEARBY_DISTANCE = 100; // pixels
 
 const OtherPlayers = () => {
-    const { otherPlayers, playerPosition, socket, user } = useGameStore();
+    const { currentMapId, otherPlayers, playerPosition, socket, user } = useGameStore();
 
     const sendFriendRequest = (playerId: string, playerUserId: number, playerUsername: string) => {
         if (!socket || !user) return;
@@ -28,7 +28,9 @@ const OtherPlayers = () => {
 
     return (
         <>
-            {Array.from(otherPlayers.values()).map((player) => {
+            {Array.from(otherPlayers.values())
+                .filter((player) => player.mapId === currentMapId) // Chỉ hiển thị người chơi cùng map
+                .map((player) => {
                 const gifPath = player.action === 'idle'
                     ? `/assets/knight/idle/down_idle.gif`
                     : `/assets/knight/${player.action}/${player.direction}_${player.action}.gif`;

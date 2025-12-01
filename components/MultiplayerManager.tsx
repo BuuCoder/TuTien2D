@@ -1,38 +1,56 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import { useGameStore } from '@/lib/store';
 
 const MultiplayerManager = () => {
     const {
         setSocket,
-        socket,
+        socket, // Vẫn giữ để dùng cho các effect khác
+        currentMapId,
         playerPosition,
+        playerDirection,
+        playerAction,
         setOtherPlayers,
         updateOtherPlayer,
         removeOtherPlayer,
         currentChannel,
         setCurrentChannel,
-        setNotification
+        setNotification,
+        user
     } = useGameStore();
 
     const [isConnected, setIsConnected] = useState(false);
+    const [isOpen, setIsOpen] = useState(false); // Mặc định đóng
 
-    const attemptJoin = (channelId: number) => {
-        if (!socket) return;
-
+    // Hàm join channel sử dụng socket instance được truyền vào
+    // để tránh lỗi stale closure
+    const joinChannelWithSocket = (socketInstance: any, channelId: number) => {
         console.log(`Attempting to join channel ${channelId}`);
-        socket.emit('join_channel', {
+        socketInstance.emit('join_channel', {
             channelId,
             playerData: {
-                x: playerPosition.x,
-                y: playerPosition.y,
+                x: useGameStore.getState().playerPosition.x,
+                y: useGameStore.getState().playerPosition.y,
                 direction: useGameStore.getState().playerDirection,
-                action: useGameStore.getState().playerAction
+                action: useGameStore.getState().playerAction,
+                mapId: useGameStore.getState().currentMapId
             }
         });
     };
+
+    // Effect để validate session khi có socket và user
+    useEffect(() => {
+        if (socket && isConnected && user) {
+            console.log('Validating session for user:', user.username);
+            socket.emit('validate_session', {
+                userId: user.id,
+                sessionId: user.sessionId,
+                username: user.username
+            });
+        }
+    }, [socket, isConnected, user]);
 
     useEffect(() => {
         const isProduction = process.env.NODE_ENV === 'production';
@@ -49,21 +67,13 @@ const MultiplayerManager = () => {
         socketInstance.on('connect', () => {
             console.log('Connected to socket server');
             setIsConnected(true);
-
-            const { user } = useGameStore.getState();
-            if (user) {
-                socketInstance.emit('validate_session', {
-                    userId: user.id,
-                    sessionId: user.sessionId,
-                    username: user.username
-                });
-            }
         });
 
         socketInstance.on('session_validated', ({ success }: any) => {
             if (success) {
                 console.log('Session validated, auto-joining channel 1');
-                attemptJoin(1);
+                // Sử dụng socketInstance trực tiếp
+                joinChannelWithSocket(socketInstance, 1);
             }
         });
 
@@ -99,9 +109,10 @@ const MultiplayerManager = () => {
             const nextChannel = channelId + 1;
             if (nextChannel <= 3) {
                 setNotification({ message: `Kênh ${channelId} đầy, đang chuyển sang kênh ${nextChannel}...`, type: 'info' });
-                setTimeout(() => attemptJoin(nextChannel), 1000);
+                setTimeout(() => joinChannelWithSocket(socketInstance, nextChannel), 1000);
             } else {
-                setNotification({ message: 'Tất cả các kênh đều đầy!', type: 'error' });
+                setNotification({ message: 'Tất cả các kênh đều đầy! Đang thử lại kênh 1...', type: 'info' });
+                setTimeout(() => joinChannelWithSocket(socketInstance, 1), 3000);
             }
         });
 
@@ -120,6 +131,10 @@ const MultiplayerManager = () => {
             removeOtherPlayer(playerId);
         });
 
+        socketInstance.on('friend_request_error', ({ message }: any) => {
+            setNotification({ message, type: 'error' });
+        });
+
         socketInstance.on('error', (message: string) => {
             setNotification({ message, type: 'error' });
         });
@@ -136,89 +151,145 @@ const MultiplayerManager = () => {
             socket.emit('player_move', {
                 x: playerPosition.x,
                 y: playerPosition.y,
-                direction: useGameStore.getState().playerDirection,
-                action: useGameStore.getState().playerAction
+                direction: playerDirection,
+                action: playerAction,
+                mapId: currentMapId
             });
         }
-    }, [playerPosition, socket, isConnected, currentChannel]);
+    }, [playerPosition, playerDirection, playerAction, currentMapId, socket, isConnected, currentChannel]);
 
-    const joinChannel = (channelId: number) => {
-        attemptJoin(channelId);
+    const handleManualJoin = (channelId: number) => {
+        if (socket) {
+            joinChannelWithSocket(socket, channelId);
+        }
     };
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: '10px',
-            right: '10px',
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            padding: '15px',
-            borderRadius: '12px',
-            color: 'white',
-            zIndex: 10000,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-            minWidth: '200px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            border: '1px solid rgba(255,255,255,0.1)'
-        }}>
-            <div style={{
-                fontSize: '14px',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                borderBottom: '1px solid rgba(255,255,255,0.1)',
-                paddingBottom: '8px'
-            }}>
+        <>
+            {/* Toggle Button */}
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    position: 'fixed',
+                    top: '15px',
+                    right: '15px',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: 'white',
+                    cursor: 'pointer',
+                    zIndex: 10001,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                    backdropFilter: 'blur(4px)',
+                    transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.85)';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.7)';
+                }}
+            >
+                {isOpen ? '✕' : '☰'}
+            </button>
+
+            {/* Panel */}
+            {isOpen && (
                 <div style={{
-                    width: '10px',
-                    height: '10px',
-                    borderRadius: '50%',
-                    backgroundColor: isConnected ? '#4CAF50' : '#f44336',
-                    boxShadow: isConnected ? '0 0 8px #4CAF50' : 'none'
-                }} />
-                {isConnected ? 'Đã kết nối máy chủ' : 'Mất kết nối'}
-            </div>
+                    position: 'fixed',
+                    top: '65px',
+                    right: '15px',
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    padding: '15px',
+                    borderRadius: '12px',
+                    color: 'white',
+                    zIndex: 10000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    minWidth: '220px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(8px)',
+                    animation: 'slideIn 0.2s ease-out',
+                }}>
+                    <style jsx>{`
+                        @keyframes slideIn {
+                            from {
+                                opacity: 0;
+                                transform: translateY(-10px);
+                            }
+                            to {
+                                opacity: 1;
+                                transform: translateY(0);
+                            }
+                        }
+                    `}</style>
 
-            <div style={{ fontSize: '13px' }}>
-                <span style={{ color: '#aaa' }}>Trạng thái: </span>
-                <span style={{ color: currentChannel ? '#4CAF50' : '#ff9800' }}>
-                    {currentChannel ? `Đang ở Kênh ${currentChannel}` : 'Chưa vào kênh'}
-                </span>
-            </div>
+                    <div style={{
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        borderBottom: '1px solid rgba(255,255,255,0.1)',
+                        paddingBottom: '8px'
+                    }}>
+                        <div style={{
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '50%',
+                            backgroundColor: isConnected ? '#4CAF50' : '#f44336',
+                            boxShadow: isConnected ? '0 0 8px #4CAF50' : 'none'
+                        }} />
+                        {isConnected ? 'Đã kết nối' : 'Mất kết nối'}
+                    </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
-                {[1, 2, 3].map(channel => (
-                    <button
-                        key={channel}
-                        onClick={() => joinChannel(channel)}
-                        disabled={!isConnected || currentChannel === channel}
-                        style={{
-                            flex: 1,
-                            padding: '8px 4px',
-                            backgroundColor: currentChannel === channel ? '#4CAF50' : 'rgba(255,255,255,0.1)',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            borderRadius: '6px',
-                            color: 'white',
-                            cursor: (!isConnected || currentChannel === channel) ? 'default' : 'pointer',
-                            fontSize: '12px',
-                            transition: 'all 0.2s',
-                            opacity: (!isConnected) ? 0.5 : 1
-                        }}
-                    >
-                        Kênh {channel}
-                    </button>
-                ))}
-            </div>
+                    <div style={{ fontSize: '12px' }}>
+                        <span style={{ color: '#aaa' }}>Trạng thái: </span>
+                        <span style={{ color: currentChannel ? '#4CAF50' : '#ff9800' }}>
+                            {currentChannel ? `Kênh ${currentChannel}` : 'Chưa vào kênh'}
+                        </span>
+                    </div>
 
-            {!isConnected && (
-                <div style={{ fontSize: '11px', color: '#f44336', marginTop: '5px' }}>
-                    Không thể kết nối đến máy chủ
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        {[1, 2, 3].map(channel => (
+                            <button
+                                key={channel}
+                                onClick={() => handleManualJoin(channel)}
+                                disabled={!isConnected || currentChannel === channel}
+                                style={{
+                                    flex: 1,
+                                    padding: '8px 4px',
+                                    backgroundColor: currentChannel === channel ? '#4CAF50' : 'rgba(255,255,255,0.1)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    borderRadius: '6px',
+                                    color: 'white',
+                                    cursor: (!isConnected || currentChannel === channel) ? 'default' : 'pointer',
+                                    fontSize: '11px',
+                                    transition: 'all 0.2s',
+                                    opacity: (!isConnected) ? 0.5 : 1,
+                                    fontWeight: currentChannel === channel ? 'bold' : 'normal'
+                                }}
+                            >
+                                {channel}
+                            </button>
+                        ))}
+                    </div>
+
+                    {!isConnected && (
+                        <div style={{ fontSize: '10px', color: '#f44336', marginTop: '2px' }}>
+                            Không thể kết nối máy chủ
+                        </div>
+                    )}
                 </div>
             )}
-        </div>
+        </>
     );
 };
 
