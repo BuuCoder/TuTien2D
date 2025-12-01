@@ -19,7 +19,6 @@ const MultiplayerManager = () => {
 
     const [isConnected, setIsConnected] = useState(false);
 
-    // Auto-join logic
     const attemptJoin = (channelId: number) => {
         if (!socket) return;
 
@@ -36,8 +35,6 @@ const MultiplayerManager = () => {
     };
 
     useEffect(() => {
-        // Use the provided URL if in production or if explicitly set, otherwise default to same-origin (localhost)
-        // This fixes the issue where local dev cannot connect to a non-existent or blocked remote URL
         const isProduction = process.env.NODE_ENV === 'production';
         const socketUrl = isProduction ? 'https://socket.phatdatbatdongsan.com' : undefined;
 
@@ -52,8 +49,29 @@ const MultiplayerManager = () => {
         socketInstance.on('connect', () => {
             console.log('Connected to socket server');
             setIsConnected(true);
-            // Auto-join channel 1 on connect
-            attemptJoin(1);
+
+            const { user } = useGameStore.getState();
+            if (user) {
+                socketInstance.emit('validate_session', {
+                    userId: user.id,
+                    sessionId: user.sessionId,
+                    username: user.username
+                });
+            }
+        });
+
+        socketInstance.on('session_validated', ({ success }: any) => {
+            if (success) {
+                console.log('Session validated, auto-joining channel 1');
+                attemptJoin(1);
+            }
+        });
+
+        socketInstance.on('session_replaced', ({ message }: any) => {
+            setNotification({ message, type: 'error' });
+            setTimeout(() => {
+                useGameStore.getState().setUser(null);
+            }, 2000);
         });
 
         socketInstance.on('disconnect', () => {
@@ -62,11 +80,10 @@ const MultiplayerManager = () => {
             setCurrentChannel(null);
         });
 
-        socketInstance.on('channel_joined', ({ channelId, players }) => {
+        socketInstance.on('channel_joined', ({ channelId, players }: any) => {
             console.log(`Joined channel ${channelId} with ${players.length} players`);
             setCurrentChannel(channelId);
 
-            // Convert array to Map
             const playersMap = new Map();
             players.forEach((p: any) => {
                 if (p.id !== socketInstance.id) {
@@ -77,9 +94,8 @@ const MultiplayerManager = () => {
             setNotification({ message: `Đã vào kênh ${channelId}`, type: 'success' });
         });
 
-        socketInstance.on('channel_full', ({ channelId }) => {
+        socketInstance.on('channel_full', ({ channelId }: any) => {
             console.log(`Channel ${channelId} is full`);
-            // Try next channel
             const nextChannel = channelId + 1;
             if (nextChannel <= 3) {
                 setNotification({ message: `Kênh ${channelId} đầy, đang chuyển sang kênh ${nextChannel}...`, type: 'info' });
@@ -89,22 +105,22 @@ const MultiplayerManager = () => {
             }
         });
 
-        socketInstance.on('player_joined', (player) => {
+        socketInstance.on('player_joined', (player: any) => {
             console.log('Player joined:', player);
             updateOtherPlayer(player.id, player);
             setNotification({ message: 'Có người chơi mới tham gia', type: 'info' });
         });
 
-        socketInstance.on('player_moved', (data) => {
+        socketInstance.on('player_moved', (data: any) => {
             updateOtherPlayer(data.id, data);
         });
 
-        socketInstance.on('player_left', (playerId) => {
+        socketInstance.on('player_left', (playerId: string) => {
             console.log('Player left:', playerId);
             removeOtherPlayer(playerId);
         });
 
-        socketInstance.on('error', (message) => {
+        socketInstance.on('error', (message: string) => {
             setNotification({ message, type: 'error' });
         });
 
@@ -115,7 +131,6 @@ const MultiplayerManager = () => {
         };
     }, [setSocket, setCurrentChannel, setOtherPlayers, updateOtherPlayer, removeOtherPlayer, setNotification]);
 
-    // Broadcast movement
     useEffect(() => {
         if (socket && isConnected && currentChannel) {
             socket.emit('player_move', {
@@ -200,7 +215,7 @@ const MultiplayerManager = () => {
 
             {!isConnected && (
                 <div style={{ fontSize: '11px', color: '#f44336', marginTop: '5px' }}>
-                    Không thể kết nối đến socket.phatdatbatdongsan.com
+                    Không thể kết nối đến máy chủ
                 </div>
             )}
         </div>

@@ -1,0 +1,128 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useGameStore } from '@/lib/store';
+
+interface PlayerChatBubble {
+    userId: number;
+    message: string;
+    timestamp: number;
+}
+
+const PlayerChatBubbles = () => {
+    const { chatMessages, otherPlayers, user, playerPosition } = useGameStore();
+    const [activeBubbles, setActiveBubbles] = useState<Map<number, PlayerChatBubble>>(new Map());
+
+    useEffect(() => {
+        // Lấy tin nhắn mới nhất
+        if (chatMessages.length === 0) return;
+
+        const latestMessage = chatMessages[chatMessages.length - 1];
+        const newBubbles = new Map(activeBubbles);
+
+        newBubbles.set(latestMessage.userId, {
+            userId: latestMessage.userId,
+            message: latestMessage.message,
+            timestamp: Date.now()
+        });
+
+        setActiveBubbles(newBubbles);
+
+        // Xóa sau 8 giây
+        setTimeout(() => {
+            setActiveBubbles(prev => {
+                const updated = new Map(prev);
+                updated.delete(latestMessage.userId);
+                return updated;
+            });
+        }, 8000);
+    }, [chatMessages]);
+
+    return (
+        <>
+            {/* Bubble cho người chơi hiện tại */}
+            {user && activeBubbles.has(user.id) && (
+                <div style={{
+                    position: 'absolute',
+                    left: playerPosition.x,
+                    top: playerPosition.y - 80,
+                    transform: 'translateX(-50%)',
+                    zIndex: 1002
+                }}>
+                    <div style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                        color: 'white',
+                        padding: '8px 12px',
+                        borderRadius: '12px',
+                        fontSize: '13px',
+                        maxWidth: '200px',
+                        wordWrap: 'break-word',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        border: '2px solid #667eea',
+                        position: 'relative'
+                    }}>
+                        {activeBubbles.get(user.id)?.message}
+                        <div style={{
+                            position: 'absolute',
+                            bottom: '-8px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: 0,
+                            height: 0,
+                            borderLeft: '8px solid transparent',
+                            borderRight: '8px solid transparent',
+                            borderTop: '8px solid #667eea'
+                        }} />
+                    </div>
+                </div>
+            )}
+
+            {/* Bubbles cho người chơi khác */}
+            {Array.from(otherPlayers.values()).map((player) => {
+                const bubble = activeBubbles.get(player.userId || 0);
+                if (!bubble || !player.userId) return null;
+
+                return (
+                    <div
+                        key={player.id}
+                        style={{
+                            position: 'absolute',
+                            left: player.x,
+                            top: player.y - 80,
+                            transform: 'translateX(-50%)',
+                            zIndex: 1002
+                        }}
+                    >
+                        <div style={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                            color: 'white',
+                            padding: '8px 12px',
+                            borderRadius: '12px',
+                            fontSize: '13px',
+                            maxWidth: '200px',
+                            wordWrap: 'break-word',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            border: '2px solid #555',
+                            position: 'relative'
+                        }}>
+                            {bubble.message}
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '-8px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: 0,
+                                height: 0,
+                                borderLeft: '8px solid transparent',
+                                borderRight: '8px solid transparent',
+                                borderTop: '8px solid #555'
+                            }} />
+                        </div>
+                    </div>
+                );
+            })}
+        </>
+    );
+};
+
+export default PlayerChatBubbles;

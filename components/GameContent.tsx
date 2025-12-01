@@ -1,0 +1,40 @@
+'use client';
+
+import React from 'react';
+import { useGameStore } from '@/lib/store';
+import GameMap from './GameMap';
+import Instructions from './UI';
+import Joystick from './Joystick';
+import InteractButton from './InteractButton';
+import MenuPopup from './MenuPopup';
+import NotificationPopup from './NotificationPopup';
+import TargetIndicator from './TargetIndicator';
+import MultiplayerManager from './MultiplayerManager';
+import LoginPage from './LoginPage';
+import ChatBox from './ChatBox';
+import FriendRequestPopup from './FriendRequestPopup';
+
+const GameContent = () => {
+    const { user } = useGameStore();
+
+    if (!user) {
+        return <LoginPage />;
+    }
+
+    return (
+        <>
+            <GameMap />
+            <Instructions />
+            <Joystick />
+            <InteractButton />
+            <MenuPopup />
+            <NotificationPopup />
+            <TargetIndicator />
+            <MultiplayerManager />
+            <ChatBox />
+            <FriendRequestPopup />
+        </>
+    );
+};
+
+export default GameContent;

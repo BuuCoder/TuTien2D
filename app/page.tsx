@@ -5,7 +5,9 @@ import InteractButton from '@/components/InteractButton';
 import MenuPopup from '@/components/MenuPopup';
 import NotificationPopup from '@/components/NotificationPopup';
 import TargetIndicator from '@/components/TargetIndicator';
+import LoginPage from '@/components/LoginPage';
 import MultiplayerManager from '@/components/MultiplayerManager';
+import GameContent from '@/components/GameContent';
 
 export default function Home() {
   return (
@@ -22,14 +24,7 @@ export default function Home() {
       left: 0,
       overflow: 'hidden'
     }}>
-      <GameMap />
-      <Instructions />
-      <Joystick />
-      <InteractButton />
-      <MenuPopup />
-      <NotificationPopup />
-      <TargetIndicator />
-      <MultiplayerManager />
+      <GameContent />
     </main>
   );
 }

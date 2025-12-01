@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Player from './Player';
 import NPC from './NPC';
 import OtherPlayers from './OtherPlayers';
+import PlayerChatBubbles from './PlayerChatBubbles';
 import { useGameStore } from '@/lib/store';
 
 const MAP_WIDTH = 1200;
@@ -142,6 +143,7 @@ const GameMap = () => {
 
                 <OtherPlayers />
                 <Player />
+                <PlayerChatBubbles />
             </div>
         </div>
     );
