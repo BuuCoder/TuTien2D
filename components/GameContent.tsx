@@ -14,6 +14,9 @@ import MultiplayerManager from './MultiplayerManager';
 import LoginPage from './LoginPage';
 import ChatBox from './ChatBox';
 import FriendRequestPopup from './FriendRequestPopup';
+import CombatUI from './CombatUI';
+import CombatManager from './CombatManager';
+import PKRequestPopup from './PKRequestPopup';
 
 const GameContent = () => {
     const { user, currentMapId } = useGameStore();
@@ -41,6 +44,9 @@ const GameContent = () => {
             <MultiplayerManager />
             <ChatBox />
             <FriendRequestPopup />
+            <PKRequestPopup />
+            <CombatUI />
+            <CombatManager />
         </>
     );
 };

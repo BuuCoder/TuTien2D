@@ -147,6 +147,159 @@ app.prepare().then(() => {
             }
         });
 
+        // PK Request
+        socket.on('send_pk_request', ({ requestId, toSocketId, toUserId, toUsername }) => {
+            if (!currentChannel || !userId || !username) return;
+
+            console.log(`[PK] ${username} sent PK request to ${toUsername}`);
+
+            const targetSocket = io.sockets.sockets.get(toSocketId);
+            if (targetSocket) {
+                targetSocket.emit('pk_request', {
+                    requestId,
+                    fromUserId: userId,
+                    fromUsername: username,
+                    fromSocketId: socket.id,
+                    timestamp: Date.now(),
+                    expiresAt: Date.now() + 10000 // 10 seconds
+                });
+            } else {
+                socket.emit('pk_request_error', { message: `${toUsername} không trực tuyến!` });
+            }
+        });
+
+        // PK Request Response
+        socket.on('pk_request_response', ({ requestId, fromSocketId, accepted }) => {
+            if (!currentChannel || !userId || !username) return;
+
+            console.log(`[PK] ${username} ${accepted ? 'accepted' : 'declined'} PK from ${fromSocketId}`);
+
+            const requesterSocket = io.sockets.sockets.get(fromSocketId);
+            if (requesterSocket) {
+                requesterSocket.emit('pk_request_response', {
+                    requestId,
+                    accepted,
+                    targetSocketId: socket.id,
+                    targetUsername: username,
+                    message: accepted 
+                        ? `${username} đã chấp nhận PK!` 
+                        : `${username} đã từ chối PK.`
+                });
+            }
+        });
+
+        // Combat: Use skill
+        socket.on('use_skill', ({ skillId, targetId, position }) => {
+            if (!currentChannel) return;
+
+            console.log(`[Combat] ${username} used skill ${skillId} on ${targetId || 'position'}`);
+
+            // Broadcast skill use to all players in channel
+            io.to(`channel_${currentChannel}`).emit('skill_used', {
+                casterId: socket.id,
+                casterUserId: userId,
+                casterUsername: username,
+                skillId,
+                targetId,
+                position,
+                timestamp: Date.now()
+            });
+        });
+
+        // Combat: Take damage
+        socket.on('take_damage', ({ damage, attackerId, targetId, skillId }) => {
+            if (!currentChannel) return;
+
+            console.log(`[Combat] Damage request: ${damage} from ${attackerId} (${socket.id}) to ${targetId}`);
+
+            // Verify attacker is the one sending
+            if (attackerId !== socket.id) {
+                console.log('[Combat] ERROR: Attacker ID mismatch!');
+                return;
+            }
+
+            // Send damage ONLY to specific target
+            const targetSocket = io.sockets.sockets.get(targetId);
+            if (targetSocket) {
+                console.log(`[Combat] Sending damage to target ${targetId}`);
+                targetSocket.emit('player_damaged', {
+                    playerId: targetId,
+                    damage,
+                    attackerId,
+                    skillId,
+                    timestamp: Date.now()
+                });
+            } else {
+                console.log(`[Combat] Target ${targetId} not found`);
+            }
+        });
+
+        // Combat: Player death
+        socket.on('player_death', ({ killerId }) => {
+            if (!currentChannel) return;
+
+            console.log(`[Combat] ${username} was killed by ${killerId}`);
+
+            io.to(`channel_${currentChannel}`).emit('player_died', {
+                playerId: socket.id,
+                playerUsername: username,
+                killerId,
+                timestamp: Date.now()
+            });
+        });
+
+        // Combat: HP Update
+        socket.on('update_hp', ({ hp, maxHp }) => {
+            if (!currentChannel) return;
+
+            const player = channels[currentChannel].get(socket.id);
+            if (player) {
+                player.hp = hp;
+                player.maxHp = maxHp;
+                channels[currentChannel].set(socket.id, player);
+            }
+
+            // Broadcast HP update to all players
+            io.to(`channel_${currentChannel}`).emit('player_hp_updated', {
+                playerId: socket.id,
+                hp,
+                maxHp,
+                timestamp: Date.now()
+            });
+        });
+
+        // PK Forfeit (player left map)
+        socket.on('pk_forfeit', ({ opponentId, reason }) => {
+            if (!currentChannel) return;
+
+            console.log(`[PK] ${username} forfeited against ${opponentId} (${reason})`);
+
+            const opponentSocket = io.sockets.sockets.get(opponentId);
+            if (opponentSocket) {
+                opponentSocket.emit('pk_forfeit', {
+                    playerId: socket.id,
+                    playerUsername: username,
+                    reason
+                });
+            }
+        });
+
+        // PK Ended
+        socket.on('pk_ended', ({ opponentId, winner, reason }) => {
+            if (!currentChannel) return;
+
+            console.log(`[PK] Battle ended between ${socket.id} and ${opponentId}, winner: ${winner}`);
+
+            const opponentSocket = io.sockets.sockets.get(opponentId);
+            if (opponentSocket) {
+                opponentSocket.emit('pk_ended', {
+                    opponentId: socket.id,
+                    winner,
+                    reason
+                });
+            }
+        });
+
         // Chat messages
         socket.on('send_chat', async ({ message, channelId }) => {
             if (!currentChannel || !userId || !username) return;

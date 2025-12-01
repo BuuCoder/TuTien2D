@@ -40,6 +40,8 @@ interface OtherPlayer {
   userId?: number;
   username?: string;
   mapId?: string;
+  hp?: number;
+  maxHp?: number;
 }
 
 interface ChatMessage {
@@ -56,6 +58,43 @@ interface User {
   sessionId: string;
   gold: number;
   level: number;
+}
+
+interface PlayerStats {
+  maxHp: number;
+  currentHp: number;
+  maxMana: number;
+  currentMana: number;
+  attack: number;
+  defense: number;
+}
+
+interface SkillCooldown {
+  skillId: string;
+  endTime: number;
+}
+
+interface ActiveEffect {
+  type: 'stun' | 'slow' | 'burn' | 'heal';
+  endTime: number;
+  value?: number;
+}
+
+interface DamageIndicator {
+  id: string;
+  x: number;
+  y: number;
+  damage: number;
+  timestamp: number;
+}
+
+interface PKRequest {
+  requestId: string;
+  fromUserId: number;
+  fromUsername: string;
+  fromSocketId: string;
+  timestamp: number;
+  expiresAt: number;
 }
 
 interface GameState {
@@ -102,6 +141,32 @@ interface GameState {
   // Chat messages
   chatMessages: ChatMessage[];
   addChatMessage: (message: ChatMessage) => void;
+
+  // Combat System
+  playerStats: PlayerStats;
+  setPlayerStats: (stats: Partial<PlayerStats>) => void;
+  skillCooldowns: SkillCooldown[];
+  addSkillCooldown: (skillId: string, duration: number) => void;
+  activeEffects: ActiveEffect[];
+  addActiveEffect: (effect: ActiveEffect) => void;
+  removeExpiredEffects: () => void;
+  damageIndicators: DamageIndicator[];
+  addDamageIndicator: (x: number, y: number, damage: number) => void;
+  removeDamageIndicator: (id: string) => void;
+  isPKMode: boolean;
+  setIsPKMode: (mode: boolean) => void;
+  targetPlayerId: string | null;
+  setTargetPlayerId: (id: string | null) => void;
+  pkRequests: PKRequest[];
+  addPKRequest: (request: PKRequest) => void;
+  removePKRequest: (requestId: string) => void;
+  activePKSessions: string[]; // List of player IDs we're in PK with
+  addPKSession: (playerId: string) => void;
+  removePKSession: (playerId: string) => void;
+  isBlocking: boolean;
+  setIsBlocking: (blocking: boolean) => void;
+  blockEndTime: number;
+  setBlockEndTime: (time: number) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -200,6 +265,69 @@ export const useGameStore = create<GameState>((set) => ({
   addChatMessage: (message) => set((state) => ({
     chatMessages: [...state.chatMessages, message]
   })),
+
+  // Combat System
+  playerStats: {
+    maxHp: 500,
+    currentHp: 500,
+    maxMana: 200,
+    currentMana: 200,
+    attack: 10,
+    defense: 5,
+  },
+  setPlayerStats: (stats) => set((state) => ({
+    playerStats: { ...state.playerStats, ...stats }
+  })),
+  skillCooldowns: [],
+  addSkillCooldown: (skillId, duration) => set((state) => ({
+    skillCooldowns: [
+      ...state.skillCooldowns.filter(cd => cd.skillId !== skillId),
+      { skillId, endTime: Date.now() + duration }
+    ]
+  })),
+  activeEffects: [],
+  addActiveEffect: (effect) => set((state) => ({
+    activeEffects: [...state.activeEffects, effect]
+  })),
+  removeExpiredEffects: () => set((state) => ({
+    activeEffects: state.activeEffects.filter(e => e.endTime > Date.now()),
+    skillCooldowns: state.skillCooldowns.filter(cd => cd.endTime > Date.now())
+  })),
+  damageIndicators: [],
+  addDamageIndicator: (x, y, damage) => set((state) => {
+    const id = `${Date.now()}-${Math.random()}`;
+    setTimeout(() => {
+      useGameStore.getState().removeDamageIndicator(id);
+    }, 1000);
+    return {
+      damageIndicators: [...state.damageIndicators, { id, x, y, damage, timestamp: Date.now() }]
+    };
+  }),
+  removeDamageIndicator: (id) => set((state) => ({
+    damageIndicators: state.damageIndicators.filter(d => d.id !== id)
+  })),
+  isPKMode: true, // Mặc định ON
+  setIsPKMode: (mode) => set({ isPKMode: mode }),
+  targetPlayerId: null,
+  setTargetPlayerId: (id) => set({ targetPlayerId: id }),
+  pkRequests: [],
+  addPKRequest: (request) => set((state) => ({
+    pkRequests: [...state.pkRequests, request]
+  })),
+  removePKRequest: (requestId) => set((state) => ({
+    pkRequests: state.pkRequests.filter(r => r.requestId !== requestId)
+  })),
+  activePKSessions: [],
+  addPKSession: (playerId) => set((state) => ({
+    activePKSessions: [...state.activePKSessions, playerId]
+  })),
+  removePKSession: (playerId) => set((state) => ({
+    activePKSessions: state.activePKSessions.filter(id => id !== playerId)
+  })),
+  isBlocking: false,
+  setIsBlocking: (blocking) => set({ isBlocking: blocking }),
+  blockEndTime: 0,
+  setBlockEndTime: (time) => set({ blockEndTime: time }),
 }));
 
 // Khôi phục dữ liệu từ localStorage khi khởi động

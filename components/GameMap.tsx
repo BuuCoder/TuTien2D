@@ -6,6 +6,7 @@ import NPC from './NPC';
 import OtherPlayers from './OtherPlayers';
 import PlayerChatBubbles from './PlayerChatBubbles';
 import Portal from './Portal';
+import DamageIndicators from './DamageIndicators';
 import { useGameStore } from '@/lib/store';
 import { MAPS } from '@/lib/gameData';
 
@@ -151,6 +152,7 @@ const GameMap = () => {
                 <OtherPlayers />
                 <Player />
                 <PlayerChatBubbles />
+                <DamageIndicators />
             </div>
         </div>
     );

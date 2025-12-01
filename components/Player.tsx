@@ -150,7 +150,7 @@ const Player = () => {
                 backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
                 transform: 'translate(-50%, -50%)',
-                zIndex: 1000,
+                zIndex: Math.floor(playerPosition.y), // Z-index based on Y position
             }}
         >
             <div style={{
