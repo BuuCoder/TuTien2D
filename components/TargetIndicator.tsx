@@ -3,14 +3,31 @@
 import React from 'react';
 import { useGameStore } from '@/lib/store';
 
+const MAP_WIDTH = 1200;
+const MAP_HEIGHT = 900;
+
 const TargetIndicator = () => {
     const { targetPosition, cameraOffset } = useGameStore();
+    const [viewportSize, setViewportSize] = React.useState({ width: 0, height: 0 });
+
+    React.useEffect(() => {
+        const updateViewport = () => {
+            setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+        };
+        updateViewport();
+        window.addEventListener('resize', updateViewport);
+        return () => window.removeEventListener('resize', updateViewport);
+    }, []);
 
     if (!targetPosition) return null;
 
+    // Calculate centering offset
+    const centeringOffsetX = Math.max(0, (viewportSize.width - MAP_WIDTH) / 2);
+    const centeringOffsetY = Math.max(0, (viewportSize.height - MAP_HEIGHT) / 2);
+
     // Convert world position to screen position
-    const screenX = targetPosition.x - cameraOffset.x;
-    const screenY = targetPosition.y - cameraOffset.y;
+    const screenX = targetPosition.x - cameraOffset.x + centeringOffsetX;
+    const screenY = targetPosition.y - cameraOffset.y + centeringOffsetY;
 
     return (
         <div

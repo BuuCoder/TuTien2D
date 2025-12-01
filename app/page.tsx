@@ -5,6 +5,7 @@ import InteractButton from '@/components/InteractButton';
 import MenuPopup from '@/components/MenuPopup';
 import NotificationPopup from '@/components/NotificationPopup';
 import TargetIndicator from '@/components/TargetIndicator';
+import MultiplayerManager from '@/components/MultiplayerManager';
 
 export default function Home() {
   return (
@@ -28,6 +29,7 @@ export default function Home() {
       <MenuPopup />
       <NotificationPopup />
       <TargetIndicator />
+      <MultiplayerManager />
     </main>
   );
 }

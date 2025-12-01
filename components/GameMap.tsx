@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Player from './Player';
 import NPC from './NPC';
+import OtherPlayers from './OtherPlayers';
 import { useGameStore } from '@/lib/store';
 
 const MAP_WIDTH = 1200;
@@ -58,6 +59,10 @@ const GameMap = () => {
         );
     }
 
+    // Calculate centering offset if viewport is larger than map
+    const centeringOffsetX = Math.max(0, (viewportSize.width - MAP_WIDTH) / 2);
+    const centeringOffsetY = Math.max(0, (viewportSize.height - MAP_HEIGHT) / 2);
+
     const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
         // Only handle clicks on the game world, not UI elements
         if (e.target === e.currentTarget || (e.target as HTMLElement).closest('[data-game-world]')) {
@@ -65,9 +70,13 @@ const GameMap = () => {
             const clickX = e.clientX - rect.left;
             const clickY = e.clientY - rect.top;
 
+            // Adjust for centering offset
+            const adjustedClickX = clickX - centeringOffsetX;
+            const adjustedClickY = clickY - centeringOffsetY;
+
             // Convert screen coordinates to world coordinates
-            const worldX = clickX + cameraOffset.x;
-            const worldY = clickY + cameraOffset.y;
+            const worldX = adjustedClickX + cameraOffset.x;
+            const worldY = adjustedClickY + cameraOffset.y;
 
             // Set target position
             useGameStore.getState().setTargetPosition({ x: worldX, y: worldY });
@@ -93,8 +102,8 @@ const GameMap = () => {
                     position: 'absolute',
                     width: `${MAP_WIDTH}px`,
                     height: `${MAP_HEIGHT}px`,
-                    left: -cameraOffset.x,
-                    top: -cameraOffset.y,
+                    left: -cameraOffset.x + centeringOffsetX,
+                    top: -cameraOffset.y + centeringOffsetY,
                     transition: 'left 0.1s ease-out, top 0.1s ease-out',
                     zIndex: 1,
                 }}
@@ -124,8 +133,6 @@ const GameMap = () => {
               repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(0,0,0,0.1) 49px, rgba(0,0,0,0.1) 50px),
               repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(0,0,0,0.1) 49px, rgba(0,0,0,0.1) 50px)
             `,
-                        pointerEvents: 'none',
-                        zIndex: 1,
                     }}
                 />
 
@@ -133,6 +140,7 @@ const GameMap = () => {
                 <NPC id="healer" x={900} y={600} type="healer" />
                 <NPC id="village-elder" x={300} y={700} type="village-elder" />
 
+                <OtherPlayers />
                 <Player />
             </div>
         </div>

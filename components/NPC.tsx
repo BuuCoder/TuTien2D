@@ -11,6 +11,8 @@ interface NPCProps {
 }
 
 const INTERACTION_DISTANCE = 80;
+const MAP_WIDTH = 1200;
+const MAP_HEIGHT = 900;
 
 const NPC_SPRITES: Record<string, string> = {
     'merchant': '/assets/npc/business/down_idle.gif',
@@ -19,9 +21,26 @@ const NPC_SPRITES: Record<string, string> = {
     'guard': '/assets/npc/village/down_idle.gif',
 };
 
+const NPC_NAMES: Record<string, string> = {
+    'merchant': 'Thương Buôn',
+    'healer': 'Y Sư',
+    'village-elder': 'Trưởng Làng',
+    'guard': 'Lính Canh',
+};
+
 const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
     const { playerPosition, setNearbyNPCId, setIsInteracting, addNPCMessage, npcMessages, setActiveMenu, cameraOffset } = useGameStore();
     const wasInRangeRef = useRef(false);
+    const [viewportSize, setViewportSize] = React.useState({ width: 0, height: 0 });
+
+    React.useEffect(() => {
+        const updateViewport = () => {
+            setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+        };
+        updateViewport();
+        window.addEventListener('resize', updateViewport);
+        return () => window.removeEventListener('resize', updateViewport);
+    }, []);
 
     const npcMessage = npcMessages.find(m => m.npcId === id);
 
@@ -93,9 +112,13 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [x, y, id, setIsInteracting, addNPCMessage, setActiveMenu]);
 
-    // Calculate screen position (world position - camera offset)
-    const screenX = x - cameraOffset.x;
-    const screenY = y - cameraOffset.y;
+    // Calculate centering offset
+    const centeringOffsetX = Math.max(0, (viewportSize.width - MAP_WIDTH) / 2);
+    const centeringOffsetY = Math.max(0, (viewportSize.height - MAP_HEIGHT) / 2);
+
+    // Calculate screen position (world position - camera offset + centering offset)
+    const screenX = x - cameraOffset.x + centeringOffsetX;
+    const screenY = y - cameraOffset.y + centeringOffsetY;
 
     return (
         <>
@@ -113,7 +136,22 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
                     transform: 'translate(-50%, -50%)',
                     zIndex: Math.floor(y),
                 }}
-            />
+            >
+                <div style={{
+                    position: 'absolute',
+                    top: '-20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    color: '#ffeb3b', // Yellow for NPCs
+                    textShadow: '1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black',
+                    fontSize: '12px',
+                    whiteSpace: 'nowrap',
+                    fontWeight: 'bold',
+                    pointerEvents: 'none'
+                }}>
+                    {NPC_NAMES[type] || type}
+                </div>
+            </div>
 
             {/* Message Bubble - Fixed to screen position */}
             {npcMessage && (

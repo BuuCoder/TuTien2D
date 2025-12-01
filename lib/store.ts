@@ -22,9 +22,21 @@ interface Notification {
   type: 'success' | 'error' | 'info';
 }
 
+interface OtherPlayer {
+  id: string;
+  x: number;
+  y: number;
+  direction: 'up' | 'down' | 'left' | 'right';
+  action: 'idle' | 'run';
+}
+
 interface GameState {
   playerPosition: { x: number; y: number };
   setPlayerPosition: (x: number, y: number) => void;
+  playerDirection: 'up' | 'down' | 'left' | 'right';
+  setPlayerDirection: (direction: 'up' | 'down' | 'left' | 'right') => void;
+  playerAction: 'idle' | 'run';
+  setPlayerAction: (action: 'idle' | 'run') => void;
   cameraOffset: { x: number; y: number };
   setCameraOffset: (x: number, y: number) => void;
   nearbyNPCId: string | null;
@@ -42,11 +54,25 @@ interface GameState {
   setNotification: (notification: Notification | null) => void;
   targetPosition: { x: number; y: number } | null;
   setTargetPosition: (position: { x: number; y: number } | null) => void;
+
+  // Multiplayer
+  socket: any;
+  setSocket: (socket: any) => void;
+  currentChannel: number | null;
+  setCurrentChannel: (channel: number | null) => void;
+  otherPlayers: Map<string, OtherPlayer>;
+  setOtherPlayers: (players: Map<string, OtherPlayer>) => void;
+  updateOtherPlayer: (id: string, data: Partial<OtherPlayer>) => void;
+  removeOtherPlayer: (id: string) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
   playerPosition: { x: 400, y: 300 },
   setPlayerPosition: (x, y) => set({ playerPosition: { x, y } }),
+  playerDirection: 'down',
+  setPlayerDirection: (direction) => set({ playerDirection: direction }),
+  playerAction: 'idle',
+  setPlayerAction: (action) => set({ playerAction: action }),
   cameraOffset: { x: 0, y: 0 },
   setCameraOffset: (x, y) => set({ cameraOffset: { x, y } }),
   nearbyNPCId: null,
@@ -73,4 +99,28 @@ export const useGameStore = create<GameState>((set) => ({
   setNotification: (notification) => set({ notification }),
   targetPosition: null,
   setTargetPosition: (position) => set({ targetPosition: position }),
+
+  // Multiplayer
+  socket: null,
+  setSocket: (socket) => set({ socket }),
+  currentChannel: null,
+  setCurrentChannel: (channel) => set({ currentChannel: channel }),
+  otherPlayers: new Map(),
+  setOtherPlayers: (players) => set({ otherPlayers: players }),
+  updateOtherPlayer: (id, data) => set((state) => {
+    const newPlayers = new Map(state.otherPlayers);
+    const player = newPlayers.get(id);
+    if (player) {
+      newPlayers.set(id, { ...player, ...data });
+    } else if (data.x !== undefined && data.y !== undefined) {
+      // If player doesn't exist but we have full data (shouldn't happen often but good fallback)
+      newPlayers.set(id, data as OtherPlayer);
+    }
+    return { otherPlayers: newPlayers };
+  }),
+  removeOtherPlayer: (id) => set((state) => {
+    const newPlayers = new Map(state.otherPlayers);
+    newPlayers.delete(id);
+    return { otherPlayers: newPlayers };
+  }),
 }));

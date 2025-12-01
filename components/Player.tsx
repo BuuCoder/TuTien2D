@@ -9,8 +9,19 @@ const MAP_HEIGHT = 900;
 const TARGET_THRESHOLD = 10; // Distance to consider target reached
 
 const Player = () => {
-    const { playerPosition, setPlayerPosition, joystickDirection, targetPosition, setTargetPosition } = useGameStore();
-    const [direction, setDirection] = useState<'up' | 'down' | 'left' | 'right'>('down');
+    const {
+        playerPosition,
+        setPlayerPosition,
+        joystickDirection,
+        targetPosition,
+        setTargetPosition,
+        playerDirection: direction,
+        setPlayerDirection: setDirection,
+        playerAction,
+        setPlayerAction
+    } = useGameStore();
+
+    // We can keep isMoving local as it's derived from dx/dy, but we need to update store action
     const [isMoving, setIsMoving] = useState(false);
 
     const keysPressed = useRef<Set<string>>(new Set());
@@ -96,6 +107,12 @@ const Player = () => {
                 setIsMoving(false);
             }
 
+            // Update action in store
+            const newAction = (dx !== 0 || dy !== 0) ? 'run' : 'idle';
+            if (newAction !== playerAction) {
+                setPlayerAction(newAction);
+            }
+
             animationFrameId.current = requestAnimationFrame(gameLoop);
         };
 
@@ -108,7 +125,7 @@ const Player = () => {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [playerPosition, setPlayerPosition, joystickDirection, targetPosition, setTargetPosition]);
+    }, [playerPosition, setPlayerPosition, joystickDirection, targetPosition, setTargetPosition, setDirection, setPlayerAction, playerAction]);
 
     const action = isMoving ? 'run' : 'idle';
     // When idle, always use down_idle regardless of direction
@@ -130,7 +147,22 @@ const Player = () => {
                 transform: 'translate(-50%, -50%)',
                 zIndex: 1000,
             }}
-        />
+        >
+            <div style={{
+                position: 'absolute',
+                top: '-20px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                color: 'white',
+                textShadow: '1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black',
+                fontSize: '14px',
+                whiteSpace: 'nowrap',
+                fontWeight: 'bold',
+                pointerEvents: 'none'
+            }}>
+                Tiểu Hiệp
+            </div>
+        </div>
     );
 };
 
