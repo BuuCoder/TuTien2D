@@ -12,14 +12,31 @@ interface PlayerChatBubble {
 const PlayerChatBubbles = () => {
     const { chatMessages, otherPlayers, user, playerPosition } = useGameStore();
     const [activeBubbles, setActiveBubbles] = useState<Map<number, PlayerChatBubble>>(new Map());
+    const [lastMessageCount, setLastMessageCount] = useState(0);
 
     useEffect(() => {
-        // Lấy tin nhắn mới nhất
+        // Only show bubble for NEW messages (not history)
         if (chatMessages.length === 0) return;
+        
+        // Skip if this is initial load (history load)
+        if (lastMessageCount === 0 && chatMessages.length > 1) {
+            setLastMessageCount(chatMessages.length);
+            return;
+        }
+
+        // Only process if message count increased (new message)
+        if (chatMessages.length <= lastMessageCount) return;
 
         const latestMessage = chatMessages[chatMessages.length - 1];
-        const newBubbles = new Map(activeBubbles);
+        
+        // Check if message is recent (within last 5 seconds)
+        const messageAge = Date.now() - latestMessage.timestamp;
+        if (messageAge > 5000) {
+            setLastMessageCount(chatMessages.length);
+            return;
+        }
 
+        const newBubbles = new Map(activeBubbles);
         newBubbles.set(latestMessage.userId, {
             userId: latestMessage.userId,
             message: latestMessage.message,
@@ -27,6 +44,7 @@ const PlayerChatBubbles = () => {
         });
 
         setActiveBubbles(newBubbles);
+        setLastMessageCount(chatMessages.length);
 
         // Xóa sau 8 giây
         setTimeout(() => {
@@ -36,7 +54,7 @@ const PlayerChatBubbles = () => {
                 return updated;
             });
         }, 8000);
-    }, [chatMessages]);
+    }, [chatMessages, lastMessageCount, activeBubbles]);
 
     return (
         <>

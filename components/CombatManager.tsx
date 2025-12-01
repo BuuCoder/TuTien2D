@@ -95,18 +95,19 @@ const CombatManager = () => {
             return;
         }
 
-        // Find nearest target (only from active PK sessions)
+        // Find nearest target (PK players or monsters)
         const activeSessions = useGameStore.getState().activePKSessions;
+        const monsters = useGameStore.getState().monsters;
+        
         console.log('[CombatManager] Active PK sessions:', activeSessions);
-        console.log('[CombatManager] Other players:', Array.from(otherPlayers.keys()));
+        console.log('[CombatManager] Monsters:', Array.from(monsters.keys()));
         
         let targetId = null;
+        let targetType: 'player' | 'monster' = 'player';
         let minDistance = skill.range;
 
+        // Check PK players first
         otherPlayers.forEach((player, id) => {
-            console.log('[CombatManager] Checking player:', id, 'in sessions:', activeSessions.includes(id));
-            
-            // Only target players we're in PK session with
             if (!activeSessions.includes(id)) return;
 
             const distance = Math.sqrt(
@@ -114,15 +115,32 @@ const CombatManager = () => {
                 Math.pow(player.y - playerPosition.y, 2)
             );
             
-            console.log('[CombatManager] Distance to', id, ':', distance, 'range:', skill.range);
-            
             if (distance < minDistance) {
                 minDistance = distance;
                 targetId = id;
+                targetType = 'player';
             }
         });
 
-        console.log('[CombatManager] Selected target:', targetId);
+        // Check monsters if no PK target
+        if (!targetId) {
+            monsters.forEach((monster, id) => {
+                if (monster.isDead) return;
+
+                const distance = Math.sqrt(
+                    Math.pow(monster.x - playerPosition.x, 2) + 
+                    Math.pow(monster.y - playerPosition.y, 2)
+                );
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    targetId = id;
+                    targetType = 'monster';
+                }
+            });
+        }
+
+        console.log('[CombatManager] Selected target:', targetId, 'type:', targetType);
 
         // Self-heal doesn't need target
         if (skillId === 'heal') {
@@ -171,23 +189,23 @@ const CombatManager = () => {
 
         // Calculate and apply damage to target
         if (targetId) {
-            const target = otherPlayers.get(targetId);
-            if (target) {
-                const finalDamage = skill.damage;
-                
-                console.log('[CombatManager] Dealing damage:', finalDamage, 'to', targetId, 'from', socket.id);
-                console.log('[CombatManager] Emitting take_damage with:', {
+            const finalDamage = skill.damage;
+            
+            console.log('[CombatManager] Dealing damage:', finalDamage, 'to', targetId, 'type:', targetType);
+            
+            if (targetType === 'player') {
+                // Damage to player
+                socket.emit('take_damage', {
                     damage: finalDamage,
                     attackerId: socket.id,
                     targetId: targetId,
                     skillId
                 });
-                
-                // Emit damage
-                socket.emit('take_damage', {
+            } else {
+                // Damage to monster
+                socket.emit('attack_monster', {
+                    monsterId: targetId,
                     damage: finalDamage,
-                    attackerId: socket.id,
-                    targetId: targetId,
                     skillId
                 });
             }
@@ -275,10 +293,13 @@ const CombatManager = () => {
             console.log('[PK] PK request response:', data);
             
             if (data.accepted) {
-                useGameStore.getState().addPKSession(data.targetSocketId);
+                const state = useGameStore.getState();
+                
+                // Enable PK mode and add session
+                state.setIsPKMode(true);
+                state.addPKSession(data.targetSocketId);
                 
                 // Hồi phục HP/Mana khi bắt đầu PK
-                const state = useGameStore.getState();
                 setPlayerStats({
                     currentHp: state.playerStats.maxHp,
                     currentMana: state.playerStats.maxMana
@@ -289,7 +310,7 @@ const CombatManager = () => {
                     maxHp: state.playerStats.maxHp
                 });
                 
-                useGameStore.getState().setNotification({
+                state.setNotification({
                     message: data.message + ' 💚 HP đã hồi phục!',
                     type: 'success'
                 });
@@ -402,6 +423,11 @@ const CombatManager = () => {
                         });
                     }
                     
+                    // Disable PK mode if no more active sessions
+                    if (state.activePKSessions.length === 0) {
+                        state.setIsPKMode(false);
+                    }
+                    
                     // Teleport to spawn and heal after 3 seconds
                     setTimeout(() => {
                         const maxHp = useGameStore.getState().playerStats.maxHp;
@@ -437,6 +463,11 @@ const CombatManager = () => {
                     state.removePKSession(data.playerId);
                 }
                 
+                // Disable PK mode if no more active sessions
+                if (state.activePKSessions.length === 0) {
+                    state.setIsPKMode(false);
+                }
+                
                 // Hồi phục HP/Mana sau khi thắng
                 setPlayerStats({
                     currentHp: state.playerStats.maxHp,
@@ -465,6 +496,11 @@ const CombatManager = () => {
                 state.removePKSession(data.playerId);
             }
             
+            // Disable PK mode if no more active sessions
+            if (state.activePKSessions.length === 0) {
+                state.setIsPKMode(false);
+            }
+            
             // Hồi phục HP/Mana sau khi thắng
             setPlayerStats({
                 currentHp: state.playerStats.maxHp,
@@ -489,6 +525,11 @@ const CombatManager = () => {
             const state = useGameStore.getState();
             if (state.activePKSessions.includes(data.opponentId)) {
                 state.removePKSession(data.opponentId);
+            }
+
+            // Disable PK mode if no more active sessions
+            if (state.activePKSessions.length === 0) {
+                state.setIsPKMode(false);
             }
 
             // Hồi phục HP/Mana khi kết thúc PK

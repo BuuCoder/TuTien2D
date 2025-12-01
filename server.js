@@ -45,6 +45,21 @@ app.prepare().then(() => {
 
     const MAX_PLAYERS_PER_CHANNEL = 10;
     const userSessions = new Map(); // userId -> {socketId, username}
+    
+    // Monster system
+    const { MAP_MONSTERS } = require('./lib/monsterData');
+    const monsterStates = new Map(); // monsterId -> {hp, isDead, respawnTimer, ...}
+    
+    // Initialize monsters
+    Object.keys(MAP_MONSTERS).forEach(mapId => {
+        MAP_MONSTERS[mapId].forEach(monster => {
+            monsterStates.set(monster.monsterId, {
+                ...monster,
+                hp: monster.maxHp,
+                isDead: false
+            });
+        });
+    });
 
     io.on('connection', (socket) => {
         console.log('Client connected:', socket.id);
@@ -52,6 +67,25 @@ app.prepare().then(() => {
         let userId = null;
         let sessionId = null;
         let username = null;
+
+        // Request monsters for a map (register early)
+        socket.on('request_monsters', ({ mapId }) => {
+            const mapMonsters = MAP_MONSTERS[mapId] || [];
+            
+            const monstersWithState = mapMonsters.map(monster => {
+                const state = monsterStates.get(monster.monsterId);
+                return state || {
+                    ...monster,
+                    hp: monster.maxHp,
+                    isDead: false
+                };
+            });
+
+            socket.emit('monsters_data', {
+                mapId,
+                monsters: monstersWithState
+            });
+        });
 
         // Validate session
         socket.on('validate_session', async ({ userId: uid, sessionId: sid, username: uname }) => {
@@ -300,30 +334,81 @@ app.prepare().then(() => {
             }
         });
 
-        // Chat messages
-        socket.on('send_chat', async ({ message, channelId }) => {
-            if (!currentChannel || !userId || !username) return;
+        // Load chat history for map and channel
+        socket.on('load_chat_history', async ({ mapId, channelId }) => {
+            if (!mapId || !channelId) return;
+
+            try {
+                const [messages] = await db.query(
+                    `SELECT user_id as userId, username, message, created_at as timestamp 
+                     FROM chat_messages 
+                     WHERE map_id = ? AND channel_id = ? 
+                     ORDER BY created_at DESC 
+                     LIMIT 50`,
+                    [mapId, channelId]
+                );
+
+                // Reverse to show oldest first
+                const history = messages.reverse().map(msg => ({
+                    id: `history-${msg.userId}-${msg.timestamp}`,
+                    userId: msg.userId,
+                    username: msg.username,
+                    message: msg.message,
+                    mapId: mapId,
+                    timestamp: new Date(msg.timestamp).getTime()
+                }));
+
+                socket.emit('chat_history', history);
+            } catch (err) {
+                console.error('[Chat] Error loading chat history:', err);
+            }
+        });
+
+        // Chat messages (per map)
+        socket.on('send_chat', async ({ message, mapId }) => {
+            if (!userId || !username || !mapId || !currentChannel) return;
 
             const chatMessage = {
                 id: `${socket.id}-${Date.now()}`,
                 userId: userId,
                 username: username,
                 message: message,
+                mapId: mapId,
                 timestamp: Date.now()
             };
 
-            // Lưu vào database
+            // Lưu vào database với map_id và channel_id
             try {
                 await db.query(
-                    'INSERT INTO chat_messages (user_id, username, channel_id, message) VALUES (?, ?, ?, ?)',
-                    [userId, username, currentChannel, message]
+                    'INSERT INTO chat_messages (user_id, username, channel_id, map_id, message) VALUES (?, ?, ?, ?, ?)',
+                    [userId, username, currentChannel, mapId, message]
                 );
             } catch (err) {
                 console.error('Error saving chat:', err);
             }
 
-            io.to(`channel_${currentChannel}`).emit('chat_message', chatMessage);
-            console.log(`[Chat] ${username}: ${message}`);
+            // Broadcast to OTHER players on the same map (exclude sender)
+            io.sockets.sockets.forEach((clientSocket) => {
+                // Skip the sender
+                if (clientSocket.id === socket.id) return;
+
+                // Get player data from channels to check their map
+                let playerMapId = null;
+                for (const channelId of Object.keys(channels)) {
+                    const player = channels[channelId].get(clientSocket.id);
+                    if (player) {
+                        playerMapId = player.mapId;
+                        break;
+                    }
+                }
+
+                // Send message only to players on the same map
+                if (playerMapId === mapId) {
+                    clientSocket.emit('chat_message', chatMessage);
+                }
+            });
+
+            console.log(`[Chat] ${username} on ${mapId}: ${message}`);
         });
 
         // Friend requests
@@ -413,6 +498,110 @@ app.prepare().then(() => {
                 });
             } else {
                 console.log(`[Friend Request] ${username} rejected from User ${fromUserId}`);
+            }
+        });
+
+        // Monster attacks player
+        socket.on('monster_attack', ({ monsterId, targetSocketId }) => {
+            const monster = monsterStates.get(monsterId);
+            if (!monster || monster.isDead) return;
+
+            const damage = Math.max(1, monster.attack - 5); // Basic damage calculation
+
+            console.log(`[Monster] ${monster.name} attacked player ${targetSocketId} for ${damage} damage`);
+
+            io.to(targetSocketId).emit('monster_attacked_player', {
+                monsterId,
+                monsterName: monster.name,
+                targetSocketId,
+                damage,
+                timestamp: Date.now()
+            });
+        });
+
+        // Player attacks monster
+        socket.on('attack_monster', ({ monsterId, damage }) => {
+            const monster = monsterStates.get(monsterId);
+            if (!monster || monster.isDead) return;
+
+            const newHp = Math.max(0, monster.hp - damage);
+            monster.hp = newHp;
+
+            console.log(`[Monster] ${username} attacked ${monster.name} for ${damage} damage (HP: ${newHp}/${monster.maxHp})`);
+
+            if (newHp <= 0) {
+                monster.isDead = true;
+                monster.hp = 0;
+
+                console.log(`[Monster] ${monster.name} died! Gold drop: ${monster.goldDrop}`);
+
+                // Broadcast monster death
+                if (currentChannel) {
+                    io.to(`channel_${currentChannel}`).emit('monster_died', {
+                        monsterId,
+                        goldDrop: monster.goldDrop,
+                        killerId: socket.id,
+                        killerUsername: username
+                    });
+                }
+
+                // Respawn after 30 seconds
+                setTimeout(() => {
+                    monster.hp = monster.maxHp;
+                    monster.isDead = false;
+                    delete monster.goldDrop;
+
+                    console.log(`[Monster] ${monster.name} respawned`);
+
+                    if (currentChannel) {
+                        // Send full monster data for respawn
+                        io.to(`channel_${currentChannel}`).emit('monster_respawned', {
+                            ...monster,
+                            hp: monster.maxHp,
+                            isDead: false
+                        });
+                    }
+                }, 30000);
+            } else {
+                // Broadcast HP update
+                if (currentChannel) {
+                    io.to(`channel_${currentChannel}`).emit('monster_updated', {
+                        monsterId,
+                        hp: newHp,
+                        maxHp: monster.maxHp
+                    });
+                }
+            }
+        });
+
+        // Pickup gold from dead monster
+        socket.on('pickup_gold', ({ monsterId }) => {
+            const monster = monsterStates.get(monsterId);
+            
+            // Validate: monster must be dead and have gold
+            if (!monster || !monster.isDead || !monster.goldDrop) {
+                return;
+            }
+
+            const goldAmount = monster.goldDrop;
+            console.log(`[Monster] ${username} picked up ${goldAmount} gold from ${monsterId}`);
+
+            // Remove gold drop flag (only first person gets it)
+            delete monster.goldDrop;
+
+            // Send gold to picker
+            socket.emit('gold_received', {
+                monsterId,
+                amount: goldAmount
+            });
+
+            // Broadcast to ALL players to remove gold visual
+            if (currentChannel) {
+                io.to(`channel_${currentChannel}`).emit('gold_picked_up', {
+                    monsterId,
+                    playerId: socket.id,
+                    playerName: username
+                });
             }
         });
 

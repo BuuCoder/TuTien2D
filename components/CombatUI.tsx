@@ -36,25 +36,16 @@ const CombatUI = () => {
 
     const handleSkillClick = (skillId: string) => {
         const skill = SKILLS[skillId];
-        if (!skill) {
-            console.log('[CombatUI] Skill not found:', skillId);
-            return;
-        }
-
-        console.log('[CombatUI] Attempting to use skill:', skillId);
-        console.log('[CombatUI] isPKMode:', isPKMode);
-        console.log('[CombatUI] activePKSessions:', activePKSessions);
+        if (!skill) return;
 
         // Check cooldown
         const cooldown = skillCooldowns.find(cd => cd.skillId === skillId);
         if (cooldown && cooldown.endTime > Date.now()) {
-            console.log('[CombatUI] Skill on cooldown');
             return;
         }
 
         // Check mana
         if (playerStats.currentMana < skill.manaCost) {
-            console.log('[CombatUI] Not enough mana');
             useGameStore.getState().setNotification({
                 message: 'Không đủ mana!',
                 type: 'error'
@@ -62,9 +53,8 @@ const CombatUI = () => {
             return;
         }
 
-        // Check if in PK mode and has active sessions
+        // Check if in PK mode
         if (!isPKMode) {
-            console.log('[CombatUI] Not in PK mode');
             useGameStore.getState().setNotification({
                 message: 'Bật PK Mode để sử dụng skill!',
                 type: 'error'
@@ -72,17 +62,7 @@ const CombatUI = () => {
             return;
         }
 
-        if (activePKSessions.length === 0 && skillId !== 'heal') {
-            console.log('[CombatUI] No active PK sessions');
-            useGameStore.getState().setNotification({
-                message: 'Không có đối thủ PK!',
-                type: 'error'
-            });
-            return;
-        }
-
-        // Trigger skill use via CombatManager
-        console.log('[CombatUI] Triggering skill use');
+        // Trigger skill use via CombatManager (it will find target automatically)
         const event = new CustomEvent('useSkill', { detail: { skillId } });
         window.dispatchEvent(event);
     };
@@ -179,8 +159,8 @@ const CombatUI = () => {
                 )}
             </div>
 
-            {/* Skill Bar - Bottom (only show when in active PK) */}
-            {activePKSessions.length > 0 && (
+            {/* Skill Bar - Bottom (show when in PK mode or active PK) */}
+            {(isPKMode || activePKSessions.length > 0) && (
                 <div style={{
                     position: 'fixed',
                     bottom: '10px',

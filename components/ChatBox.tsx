@@ -16,11 +16,13 @@ import styles from './ChatBox.module.css';
 // ... (giữ nguyên imports và interface)
 
 const ChatBox = () => {
-    const { socket, currentChannel, user, chatMessages, addChatMessage } = useGameStore();
+    const { socket, currentChannel, currentMapId, user, chatMessages, addChatMessage } = useGameStore();
     const [inputMessage, setInputMessage] = useState('');
-    const [isOpen, setIsOpen] = useState(true);
+    const [isOpen, setIsOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+    // Setup socket listeners
     useEffect(() => {
         if (!socket) return;
 
@@ -29,7 +31,17 @@ const ChatBox = () => {
         });
 
         socket.on('chat_history', (history: ChatMessage[]) => {
+            // Clear old messages and load history
+            const state = useGameStore.getState();
+            state.chatMessages = [];
             history.forEach(msg => addChatMessage(msg));
+            
+            // Scroll to bottom immediately after loading history
+            setTimeout(() => {
+                if (messagesContainerRef.current) {
+                    messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+                }
+            }, 200);
         });
 
         return () => {
@@ -38,16 +50,46 @@ const ChatBox = () => {
         };
     }, [socket, addChatMessage]);
 
+    // Load chat history when map or channel changes
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatMessages]);
+        if (!socket || !currentMapId || !currentChannel) return;
+        
+        // Request chat history for current map and channel
+        socket.emit('load_chat_history', {
+            mapId: currentMapId,
+            channelId: currentChannel
+        });
+    }, [socket, currentMapId, currentChannel]);
+
+    // Auto scroll to bottom when new messages arrive or chat opens
+    useEffect(() => {
+        // Scroll container to bottom
+        if (messagesContainerRef.current && isOpen) {
+            setTimeout(() => {
+                if (messagesContainerRef.current) {
+                    messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+                }
+            }, 100);
+        }
+    }, [chatMessages, isOpen]);
 
     const handleSend = () => {
         if (!inputMessage.trim() || !socket || !user) return;
 
+        // Add message to local UI immediately (optimistic update)
+        const localMessage: ChatMessage = {
+            id: `local-${Date.now()}`,
+            userId: user.id,
+            username: user.username,
+            message: inputMessage,
+            timestamp: Date.now()
+        };
+        addChatMessage(localMessage);
+
+        // Send to server
         socket.emit('send_chat', {
             message: inputMessage,
-            channelId: currentChannel
+            mapId: currentMapId
         });
 
         setInputMessage('');
@@ -63,7 +105,15 @@ const ChatBox = () => {
     if (!isOpen) {
         return (
             <button
-                onClick={() => setIsOpen(true)}
+                onClick={() => {
+                    setIsOpen(true);
+                    // Scroll to bottom when opening chat
+                    setTimeout(() => {
+                        if (messagesContainerRef.current) {
+                            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+                        }
+                    }, 100);
+                }}
                 className={styles.toggleButton}
             >
                 💬 Chat
@@ -94,7 +144,7 @@ const ChatBox = () => {
             </div>
 
             {/* Messages */}
-            <div className={styles.messages}>
+            <div ref={messagesContainerRef} className={styles.messages}>
                 {chatMessages.map((msg, idx) => (
                     <div
                         key={idx}

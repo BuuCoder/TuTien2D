@@ -102,6 +102,10 @@ const MultiplayerManager = () => {
             });
             setOtherPlayers(playersMap);
             setNotification({ message: `Đã vào kênh ${channelId}`, type: 'success' });
+
+            // Request monsters for current map after joining channel
+            const currentMapId = useGameStore.getState().currentMapId;
+            socketInstance.emit('request_monsters', { mapId: currentMapId });
         });
 
         socketInstance.on('channel_full', ({ channelId }: any) => {
@@ -119,11 +123,26 @@ const MultiplayerManager = () => {
         socketInstance.on('player_joined', (player: any) => {
             console.log('Player joined:', player);
             updateOtherPlayer(player.id, player);
-            setNotification({ message: 'Có người chơi mới tham gia', type: 'info' });
+            
+            // Only show notification if player is on the same map
+            const currentMapId = useGameStore.getState().currentMapId;
+            if (player.mapId === currentMapId) {
+                setNotification({ message: `${player.username || 'Người chơi'} đã vào.`, type: 'info' });
+            }
         });
 
         socketInstance.on('player_moved', (data: any) => {
             updateOtherPlayer(data.id, data);
+            
+            // Show notification when player enters current map
+            const currentMapId = useGameStore.getState().currentMapId;
+            const otherPlayers = useGameStore.getState().otherPlayers;
+            const previousPlayer = otherPlayers.get(data.id);
+            
+            // If player just entered this map (mapId changed to current map)
+            if (previousPlayer && previousPlayer.mapId !== currentMapId && data.mapId === currentMapId) {
+                setNotification({ message: `${data.username || 'Người chơi'} đã vào map`, type: 'info' });
+            }
         });
 
         socketInstance.on('player_left', (playerId: string) => {
@@ -146,16 +165,29 @@ const MultiplayerManager = () => {
         };
     }, [setSocket, setCurrentChannel, setOtherPlayers, updateOtherPlayer, removeOtherPlayer, setNotification]);
 
+    // Broadcast player movement with throttling using ref
+    const lastBroadcastTime = React.useRef(0);
+    
     useEffect(() => {
-        if (socket && isConnected && currentChannel) {
-            socket.emit('player_move', {
-                x: playerPosition.x,
-                y: playerPosition.y,
-                direction: playerDirection,
-                action: playerAction,
-                mapId: currentMapId
-            });
+        if (!socket || !isConnected || !currentChannel) return;
+
+        const now = Date.now();
+        const timeSinceLastBroadcast = now - lastBroadcastTime.current;
+
+        // Throttle: only broadcast every 50ms
+        if (timeSinceLastBroadcast < 50) {
+            return;
         }
+
+        lastBroadcastTime.current = now;
+        
+        socket.emit('player_move', {
+            x: playerPosition.x,
+            y: playerPosition.y,
+            direction: playerDirection,
+            action: playerAction,
+            mapId: currentMapId
+        });
     }, [playerPosition, playerDirection, playerAction, currentMapId, socket, isConnected, currentChannel]);
 
     const handleManualJoin = (channelId: number) => {

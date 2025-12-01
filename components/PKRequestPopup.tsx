@@ -38,11 +38,13 @@ const PKRequestPopup = () => {
             accepted: true
         });
 
+        // Enable PK mode and add session
+        const state = useGameStore.getState();
+        state.setIsPKMode(true);
         addPKSession(request.fromSocketId);
         removePKRequest(request.requestId);
 
         // Hồi phục HP/Mana khi chấp nhận PK
-        const state = useGameStore.getState();
         state.setPlayerStats({
             currentHp: state.playerStats.maxHp,
             currentMana: state.playerStats.maxMana

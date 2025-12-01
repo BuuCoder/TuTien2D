@@ -167,6 +167,34 @@ interface GameState {
   setIsBlocking: (blocking: boolean) => void;
   blockEndTime: number;
   setBlockEndTime: (time: number) => void;
+  
+  // Monster System
+  monsters: Map<string, MonsterState>;
+  setMonsters: (monsters: Map<string, MonsterState>) => void;
+  updateMonster: (id: string, data: Partial<MonsterState>) => void;
+  removeMonster: (id: string) => void;
+  gold: number;
+  addGold: (amount: number) => void;
+  exp: number;
+  addExp: (amount: number) => void;
+}
+
+interface MonsterState {
+  monsterId: string;
+  name: string;
+  level: number;
+  hp: number;
+  maxHp: number;
+  attack: number;
+  defense: number;
+  x: number;
+  y: number;
+  sprite: string;
+  aggroRange: number;
+  attackRange: number;
+  isDead: boolean;
+  goldDrop?: number;
+  expDrop?: number;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -328,6 +356,29 @@ export const useGameStore = create<GameState>((set) => ({
   setIsBlocking: (blocking) => set({ isBlocking: blocking }),
   blockEndTime: 0,
   setBlockEndTime: (time) => set({ blockEndTime: time }),
+  
+  // Monster System
+  monsters: new Map(),
+  setMonsters: (monsters) => set({ monsters }),
+  updateMonster: (id, data) => set((state) => {
+    const newMonsters = new Map(state.monsters);
+    const monster = newMonsters.get(id);
+    if (monster) {
+      newMonsters.set(id, { ...monster, ...data });
+    } else if (data.monsterId) {
+      newMonsters.set(id, data as MonsterState);
+    }
+    return { monsters: newMonsters };
+  }),
+  removeMonster: (id) => set((state) => {
+    const newMonsters = new Map(state.monsters);
+    newMonsters.delete(id);
+    return { monsters: newMonsters };
+  }),
+  gold: 0,
+  addGold: (amount) => set((state) => ({ gold: state.gold + amount })),
+  exp: 0,
+  addExp: (amount) => set((state) => ({ exp: state.exp + amount })),
 }));
 
 // Khôi phục dữ liệu từ localStorage khi khởi động

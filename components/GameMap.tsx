@@ -7,15 +7,18 @@ import OtherPlayers from './OtherPlayers';
 import PlayerChatBubbles from './PlayerChatBubbles';
 import Portal from './Portal';
 import DamageIndicators from './DamageIndicators';
+import Monster from './Monster';
 import { useGameStore } from '@/lib/store';
 import { MAPS } from '@/lib/gameData';
 
 const GameMap = () => {
-    const { currentMapId, playerPosition, cameraOffset, setCameraOffset } = useGameStore();
+    const { currentMapId, playerPosition, cameraOffset, setCameraOffset, monsters } = useGameStore();
     const [viewportSize, setViewportSize] = useState({ width: 800, height: 600 });
     const [isMounted, setIsMounted] = useState(false);
     
     const currentMap = useMemo(() => MAPS[currentMapId] || MAPS['map1'], [currentMapId]);
+
+
 
     useEffect(() => {
         setIsMounted(true);
@@ -148,6 +151,26 @@ const GameMap = () => {
                 {currentMap.portals.map((portal, index) => (
                     <Portal key={`portal-${index}`} {...portal} />
                 ))}
+
+                {/* Render Monsters */}
+                {Array.from(monsters.values()).map((monster) => (
+                    <Monster
+                            key={monster.monsterId}
+                            monsterId={monster.monsterId}
+                            name={monster.name}
+                            level={monster.level}
+                            hp={monster.hp}
+                            maxHp={monster.maxHp}
+                            attack={monster.attack}
+                            x={monster.x}
+                            y={monster.y}
+                            sprite={monster.sprite || "/assets/monster/monster.gif"}
+                            aggroRange={monster.aggroRange || 150}
+                            attackRange={monster.attackRange || 80}
+                            isDead={monster.isDead || false}
+                            goldDrop={monster.goldDrop}
+                        />
+                    ))}
 
                 <OtherPlayers />
                 <Player />

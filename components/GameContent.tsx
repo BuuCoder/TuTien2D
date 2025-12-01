@@ -17,6 +17,7 @@ import FriendRequestPopup from './FriendRequestPopup';
 import CombatUI from './CombatUI';
 import CombatManager from './CombatManager';
 import PKRequestPopup from './PKRequestPopup';
+import MonsterManager from './MonsterManager';
 
 const GameContent = () => {
     const { user, currentMapId } = useGameStore();
@@ -47,6 +48,7 @@ const GameContent = () => {
             <PKRequestPopup />
             <CombatUI />
             <CombatManager />
+            <MonsterManager />
         </>
     );
 };
