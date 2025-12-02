@@ -105,38 +105,131 @@ const MenuPopup = () => {
                 onClick={(e) => e.stopPropagation()}
             >
                 <style>{`
-                    /* Mobile landscape responsive */
-                    @media (max-height: 500px) and (orientation: landscape) {
+                    /* Mobile portrait */
+                    @media (max-width: 600px) {
                         .menu-popup-content {
-                            padding: 16px !important;
-                            max-height: 90vh !important;
-                            max-width: 90% !important;
+                            padding: 20px !important;
+                            max-height: 85vh !important;
+                            max-width: 95% !important;
                         }
-                        .menu-popup-content h2 {
-                            font-size: 18px !important;
-                            margin-bottom: 12px !important;
+                        .menu-title {
+                            font-size: 22px !important;
+                            margin-bottom: 16px !important;
                         }
                         .menu-popup-content button {
-                            padding: 10px 16px !important;
-                            font-size: 14px !important;
+                            padding: 12px 18px !important;
+                            font-size: 15px !important;
                         }
                         .menu-item {
-                            padding: 10px !important;
+                            padding: 12px !important;
                         }
                         .menu-item-icon {
-                            font-size: 24px !important;
+                            font-size: 28px !important;
                         }
                         .menu-item-text {
-                            font-size: 13px !important;
+                            font-size: 14px !important;
                         }
                         .menu-item-price {
+                            font-size: 13px !important;
+                        }
+                    }
+
+                    /* Mobile landscape - more compact */
+                    @media (max-height: 500px) and (orientation: landscape) {
+                        .menu-popup-content {
+                            padding: 10px !important;
+                            max-height: 95vh !important;
+                            max-width: 65% !important;
+                            border-radius: 12px !important;
+                        }
+                        .menu-title {
+                            font-size: 14px !important;
+                            margin-bottom: 4px !important;
+                        }
+                        .menu-popup-content h2 {
+                            font-size: 14px !important;
+                            margin-bottom: 4px !important;
+                        }
+                        .menu-popup-content button {
+                            padding: 5px 10px !important;
+                            font-size: 11px !important;
+                        }
+                        .menu-item {
+                            padding: 6px !important;
+                            gap: 6px !important;
+                        }
+                        .quest-icon,
+                        .item-icon {
+                            font-size: 20px !important;
+                        }
+                        .menu-item-text {
+                            font-size: 11px !important;
+                            line-height: 1.2 !important;
+                            margin-bottom: 2px !important;
+                        }
+                        .menu-item-price {
+                            font-size: 10px !important;
+                            margin-top: 0px !important;
+                        }
+                        .menu-item-description {
+                            display: none !important;
+                        }
+                        .close-button {
+                            width: 24px !important;
+                            height: 24px !important;
+                            font-size: 16px !important;
+                            top: 6px !important;
+                            right: 6px !important;
+                        }
+                        .back-button {
+                            padding: 5px 10px !important;
+                            font-size: 11px !important;
+                            margin-bottom: 6px !important;
+                        }
+                    }
+
+                    /* Very small landscape screens */
+                    @media (max-height: 400px) and (orientation: landscape) {
+                        .menu-popup-content {
+                            padding: 6px !important;
+                            max-height: 98vh !important;
+                        }
+                        .menu-title {
                             font-size: 12px !important;
+                            margin-bottom: 3px !important;
+                        }
+                        .menu-popup-content h2 {
+                            font-size: 12px !important;
+                            margin-bottom: 3px !important;
+                        }
+                        .menu-popup-content button {
+                            padding: 4px 8px !important;
+                            font-size: 10px !important;
+                        }
+                        .menu-item {
+                            padding: 4px !important;
+                        }
+                        .quest-icon,
+                        .item-icon {
+                            font-size: 16px !important;
+                        }
+                        .menu-item-text {
+                            font-size: 10px !important;
+                        }
+                        .menu-item-price {
+                            font-size: 9px !important;
+                        }
+                        .close-button {
+                            width: 20px !important;
+                            height: 20px !important;
+                            font-size: 14px !important;
                         }
                     }
                 `}</style>
                 {/* Close Button */}
                 <button
                     onClick={handleClose}
+                    className="close-button"
                     style={{
                         position: 'absolute',
                         top: '16px',
@@ -236,12 +329,12 @@ const MenuPopup = () => {
                                     }}
                                 >
                                     <div style={{ display: 'flex', gap: '14px', flex: 1 }}>
-                                        <span className="menu-item-icon" style={{ fontSize: '36px' }}>{quest.image}</span>
+                                        <span className="menu-item-icon quest-icon" style={{ fontSize: '36px' }}>{quest.image}</span>
                                         <div style={{ flex: 1 }}>
                                             <div className="menu-item-text" style={{ fontWeight: '600', color: '#2c3e50', fontSize: '16px', marginBottom: '6px' }}>
                                                 {quest.name}
                                             </div>
-                                            <div className="menu-item-text" style={{ color: '#7f8c8d', fontSize: '13px', lineHeight: '1.5', marginBottom: '8px' }}>
+                                            <div className="menu-item-text menu-item-description" style={{ color: '#7f8c8d', fontSize: '13px', lineHeight: '1.5', marginBottom: '8px' }}>
                                                 {quest.description}
                                             </div>
                                             <div className="menu-item-price" style={{ color: '#f39c12', fontSize: '14px', fontWeight: '600' }}>
@@ -283,6 +376,7 @@ const MenuPopup = () => {
                     <>
                         <button
                             onClick={() => setSelectedCategory(null)}
+                            className="back-button"
                             style={{
                                 marginBottom: '20px',
                                 padding: '10px 18px',
@@ -340,7 +434,7 @@ const MenuPopup = () => {
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                        <span style={{ fontSize: '36px' }}>{item.image}</span>
+                                        <span className="menu-item-icon item-icon" style={{ fontSize: '36px' }}>{item.image}</span>
                                         <div>
                                             <div style={{ fontWeight: '600', color: '#2c3e50', fontSize: '16px' }}>
                                                 {item.name}

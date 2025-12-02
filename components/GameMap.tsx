@@ -58,7 +58,7 @@ const GameMap = () => {
                     position: 'absolute',
                     width: '100%',
                     height: '100%',
-                    backgroundColor: '#76b041',
+                    backgroundColor: '#000000',
                     overflow: 'hidden',
                 }}
             />
@@ -97,7 +97,7 @@ const GameMap = () => {
                 height: '100%',
                 overflow: 'hidden',
                 touchAction: 'none',
-                backgroundColor: '#76b041', // Fallback color
+                backgroundColor: '#000000', // Black background for edges
             }}
             onClick={handleMapClick}
         >
