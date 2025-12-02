@@ -52,17 +52,29 @@ app.prepare().then(() => {
     const MAX_PLAYERS_PER_CHANNEL = 10;
     const userSessions = new Map(); // userId -> {socketId, username}
     
-    // Monster system
+    // Monster system - MỖI CHANNEL CÓ MONSTER STATE RIÊNG
     const { MAP_MONSTERS } = require('./lib/monsterData');
-    const monsterStates = new Map(); // monsterId -> {hp, isDead, respawnTimer, ...}
     
-    // Initialize monsters
-    Object.keys(MAP_MONSTERS).forEach(mapId => {
-        MAP_MONSTERS[mapId].forEach(monster => {
-            monsterStates.set(monster.monsterId, {
-                ...monster,
-                hp: monster.maxHp,
-                isDead: false
+    // monsterStates: channelId -> Map(monsterId -> {hp, isDead, ...})
+    const monsterStates = {
+        1: new Map(),
+        2: new Map(),
+        3: new Map()
+    };
+    
+    // Initialize monsters cho từng channel
+    [1, 2, 3].forEach(channelId => {
+        Object.keys(MAP_MONSTERS).forEach(mapId => {
+            MAP_MONSTERS[mapId].forEach(monster => {
+                const uniqueId = `${monster.monsterId}-ch${channelId}`;
+                monsterStates[channelId].set(uniqueId, {
+                    ...monster,
+                    monsterId: uniqueId,
+                    originalMonsterId: monster.monsterId,
+                    hp: monster.maxHp,
+                    isDead: false,
+                    channelId: channelId
+                });
             });
         });
     });
@@ -85,16 +97,27 @@ app.prepare().then(() => {
 
         // Request monsters for a map (register early)
         socket.on('request_monsters', ({ mapId }) => {
+            if (!currentChannel) {
+                console.log('[Monster] No channel selected, cannot send monsters');
+                return;
+            }
+
             const mapMonsters = MAP_MONSTERS[mapId] || [];
+            const channelMonsters = monsterStates[currentChannel];
             
             const monstersWithState = mapMonsters.map(monster => {
-                const state = monsterStates.get(monster.monsterId);
+                const uniqueId = `${monster.monsterId}-ch${currentChannel}`;
+                const state = channelMonsters.get(uniqueId);
                 return state || {
                     ...monster,
+                    monsterId: uniqueId,
                     hp: monster.maxHp,
-                    isDead: false
+                    isDead: false,
+                    channelId: currentChannel
                 };
             });
+
+            console.log(`[Monster] Sending ${monstersWithState.length} monsters for map ${mapId} channel ${currentChannel}`);
 
             socket.emit('monsters_data', {
                 mapId,
@@ -553,11 +576,8 @@ app.prepare().then(() => {
                 console.error('Error saving chat:', err);
             }
 
-            // Broadcast to OTHER players on the same map (exclude sender)
+            // Broadcast to ALL players on the same map (including sender for chat bubbles)
             io.sockets.sockets.forEach((clientSocket) => {
-                // Skip the sender
-                if (clientSocket.id === socket.id) return;
-
                 // Get player data from channels to check their map
                 let playerMapId = null;
                 for (const channelId of Object.keys(channels)) {
@@ -568,7 +588,7 @@ app.prepare().then(() => {
                     }
                 }
 
-                // Send message only to players on the same map
+                // Send message to all players on the same map
                 if (playerMapId === mapId) {
                     clientSocket.emit('chat_message', chatMessage);
                 }
@@ -676,12 +696,15 @@ app.prepare().then(() => {
 
         // Monster attacks player
         socket.on('monster_attack', ({ monsterId, targetSocketId }) => {
-            const monster = monsterStates.get(monsterId);
+            if (!currentChannel) return;
+            
+            const channelMonsters = monsterStates[currentChannel];
+            const monster = channelMonsters.get(monsterId);
             if (!monster || monster.isDead) return;
 
-            const damage = Math.max(1, monster.attack - 5); // Basic damage calculation
+            const damage = Math.max(1, monster.attack - 5);
 
-            console.log(`[Monster] ${monster.name} attacked player ${targetSocketId} for ${damage} damage`);
+            console.log(`[Monster] ${monster.name} attacked player ${targetSocketId} for ${damage} damage (Channel ${currentChannel})`);
 
             io.to(targetSocketId).emit('monster_attacked_player', {
                 monsterId,
@@ -694,96 +717,85 @@ app.prepare().then(() => {
 
         // Player attacks monster
         socket.on('attack_monster', ({ monsterId, damage }) => {
-            if (!isAuthenticated) return;
+            if (!isAuthenticated || !currentChannel) return;
 
-            // Rate limiting
             const rateCheck = rateLimiter.check(userId, 'attack_monster');
             if (!rateCheck.allowed) {
-                return; // Silent fail để không spam error
+                return;
             }
 
-            const monster = monsterStates.get(monsterId);
+            const channelMonsters = monsterStates[currentChannel];
+            const monster = channelMonsters.get(monsterId);
             if (!monster || monster.isDead) return;
 
             const newHp = Math.max(0, monster.hp - damage);
             monster.hp = newHp;
 
-            console.log(`[Monster] ${username} attacked ${monster.name} for ${damage} damage (HP: ${newHp}/${monster.maxHp})`);
+            console.log(`[Monster Ch${currentChannel}] ${username} attacked ${monster.name} for ${damage} damage (HP: ${newHp}/${monster.maxHp})`);
 
             if (newHp <= 0) {
                 monster.isDead = true;
                 monster.hp = 0;
 
-                console.log(`[Monster] ${monster.name} died! Gold drop: ${monster.goldDrop}`);
+                console.log(`[Monster Ch${currentChannel}] ${monster.name} died! Gold drop: ${monster.goldDrop}`);
 
-                // Broadcast monster death
-                if (currentChannel) {
-                    io.to(`channel_${currentChannel}`).emit('monster_died', {
-                        monsterId,
-                        goldDrop: monster.goldDrop,
-                        killerId: socket.id,
-                        killerUsername: username
-                    });
-                }
+                io.to(`channel_${currentChannel}`).emit('monster_died', {
+                    monsterId,
+                    goldDrop: monster.goldDrop,
+                    killerId: socket.id,
+                    killerUsername: username
+                });
 
                 // Respawn after 30 seconds
+                const respawnChannel = currentChannel;
                 setTimeout(() => {
                     monster.hp = monster.maxHp;
                     monster.isDead = false;
                     delete monster.goldDrop;
 
-                    console.log(`[Monster] ${monster.name} respawned`);
+                    console.log(`[Monster Ch${respawnChannel}] ${monster.name} respawned`);
 
-                    if (currentChannel) {
-                        // Send full monster data for respawn
-                        io.to(`channel_${currentChannel}`).emit('monster_respawned', {
-                            ...monster,
-                            hp: monster.maxHp,
-                            isDead: false
-                        });
-                    }
+                    io.to(`channel_${respawnChannel}`).emit('monster_respawned', {
+                        ...monster,
+                        hp: monster.maxHp,
+                        isDead: false
+                    });
                 }, 30000);
             } else {
-                // Broadcast HP update
-                if (currentChannel) {
-                    io.to(`channel_${currentChannel}`).emit('monster_updated', {
-                        monsterId,
-                        hp: newHp,
-                        maxHp: monster.maxHp
-                    });
-                }
+                io.to(`channel_${currentChannel}`).emit('monster_updated', {
+                    monsterId,
+                    hp: newHp,
+                    maxHp: monster.maxHp
+                });
             }
         });
 
         // Pickup gold from dead monster
         socket.on('pickup_gold', ({ monsterId }) => {
-            const monster = monsterStates.get(monsterId);
+            if (!currentChannel) return;
             
-            // Validate: monster must be dead and have gold
+            const channelMonsters = monsterStates[currentChannel];
+            const monster = channelMonsters.get(monsterId);
+            
             if (!monster || !monster.isDead || !monster.goldDrop) {
                 return;
             }
 
             const goldAmount = monster.goldDrop;
-            console.log(`[Monster] ${username} picked up ${goldAmount} gold from ${monsterId}`);
+            console.log(`[Monster Ch${currentChannel}] ${username} picked up ${goldAmount} gold from ${monsterId}`);
 
-            // Remove gold drop flag (only first person gets it)
             delete monster.goldDrop;
 
-            // Send gold to picker
             socket.emit('gold_received', {
                 monsterId,
                 amount: goldAmount
             });
 
-            // Broadcast to ALL players to remove gold visual
-            if (currentChannel) {
-                io.to(`channel_${currentChannel}`).emit('gold_picked_up', {
-                    monsterId,
-                    playerId: socket.id,
-                    playerName: username
-                });
-            }
+            io.to(`channel_${currentChannel}`).emit('gold_picked_up', {
+                monsterId,
+                playerId: socket.id,
+                playerName: username
+            });
         });
 
         // Disconnect

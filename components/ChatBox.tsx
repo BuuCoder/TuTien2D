@@ -76,17 +76,7 @@ const ChatBox = () => {
     const handleSend = () => {
         if (!inputMessage.trim() || !socket || !user) return;
 
-        // Add message to local UI immediately (optimistic update)
-        const localMessage: ChatMessage = {
-            id: `local-${Date.now()}`,
-            userId: user.id,
-            username: user.username,
-            message: inputMessage,
-            timestamp: Date.now()
-        };
-        addChatMessage(localMessage);
-
-        // Send to server
+        // Send to server (server will broadcast to all including sender)
         socket.emit('send_chat', {
             message: inputMessage,
             mapId: currentMapId
@@ -102,22 +92,92 @@ const ChatBox = () => {
         }
     };
 
+    // Track unread messages - persist across open/close
+    const [unreadCount, setUnreadCount] = useState(0);
+    const lastSeenCountRef = useRef(0);
+    const hasInitializedRef = useRef(false);
+
+    // Initialize lastSeenCountRef on first load (don't count history as unread)
+    useEffect(() => {
+        if (!hasInitializedRef.current && chatMessages.length > 0) {
+            lastSeenCountRef.current = chatMessages.length;
+            hasInitializedRef.current = true;
+        }
+    }, [chatMessages]);
+
+    // Update unread count when chat is closed and new messages arrive
+    useEffect(() => {
+        if (!hasInitializedRef.current) return;
+        if (!user) return;
+
+        if (!isOpen && chatMessages.length > lastSeenCountRef.current) {
+            const newMessages = chatMessages.slice(lastSeenCountRef.current);
+            const newUnreadFromOthers = newMessages.filter(msg => msg.userId !== user.id).length;
+            
+            if (newUnreadFromOthers > 0) {
+                setUnreadCount(prev => prev + newUnreadFromOthers);
+            }
+            
+            lastSeenCountRef.current = chatMessages.length;
+        }
+    }, [chatMessages, isOpen, user]);
+
+    // Reset unread when opening chat
+    const handleOpenChat = () => {
+        setIsOpen(true);
+        setUnreadCount(0);
+        lastSeenCountRef.current = chatMessages.length;
+        setTimeout(() => {
+            if (messagesContainerRef.current) {
+                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+            }
+        }, 100);
+    };
+
     if (!isOpen) {
         return (
-            <button
-                onClick={() => {
-                    setIsOpen(true);
-                    // Scroll to bottom when opening chat
-                    setTimeout(() => {
-                        if (messagesContainerRef.current) {
-                            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-                        }
-                    }, 100);
-                }}
-                className={styles.toggleButton}
-            >
-                💬 Chat
-            </button>
+            <>
+                <button
+                    onClick={handleOpenChat}
+                    className={styles.toggleButton}
+                >
+                    💬 Chat
+                    {unreadCount > 0 && (
+                        <div 
+                            className="unread-badge"
+                            style={{
+                                position: 'absolute',
+                                top: '-5px',
+                                right: '-5px',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                backgroundColor: '#ff4444',
+                                color: 'white',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 2px 8px rgba(255, 68, 68, 0.6)',
+                                pointerEvents: 'none',
+                                zIndex: 10001
+                            }}
+                        >
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                        </div>
+                    )}
+                </button>
+                <style>{`
+                    @keyframes pulse {
+                        0%, 100% { transform: scale(1); }
+                        50% { transform: scale(1.1); }
+                    }
+                    .unread-badge {
+                        animation: pulse 2s infinite;
+                    }
+                `}</style>
+            </>
         );
     }
 

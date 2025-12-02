@@ -5,7 +5,7 @@ import { useGameStore } from '@/lib/store';
 import { MAP_MONSTERS } from '@/lib/monsterData';
 
 const MonsterManager = () => {
-    const { socket, currentMapId, setMonsters, updateMonster, removeMonster, setNotification, addDamageIndicator, playerPosition } = useGameStore();
+    const { socket, currentMapId, currentChannel, setMonsters, updateMonster, removeMonster, setNotification, addDamageIndicator, playerPosition } = useGameStore();
 
     // Setup ALL socket listeners first (before any requests)
     useEffect(() => {
@@ -120,11 +120,13 @@ const MonsterManager = () => {
         };
     }, [socket, setMonsters, updateMonster, removeMonster, setNotification, addDamageIndicator, playerPosition]);
 
-    // Request monsters when map changes
+    // Request monsters when map OR channel changes
     useEffect(() => {
-        if (!socket || !socket.connected) {
+        if (!socket || !socket.connected || !currentChannel) {
             return;
         }
+        
+        console.log(`[MonsterManager] Requesting monsters for map ${currentMapId} in channel ${currentChannel}`);
         
         // Clear old monsters
         setMonsters(new Map());
@@ -133,7 +135,7 @@ const MonsterManager = () => {
         setTimeout(() => {
             socket.emit('request_monsters', { mapId: currentMapId });
         }, 100);
-    }, [currentMapId, socket, setMonsters]);
+    }, [currentMapId, currentChannel, socket, setMonsters]);
 
     // Auto-disable PK mode when no monsters nearby
     useEffect(() => {
