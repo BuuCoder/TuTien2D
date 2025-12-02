@@ -166,9 +166,26 @@ body:-moz-full-screen {
 }
 
 input,
-textarea {
+textarea,
+select {
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
+  /* Prevent zoom on focus - iOS requires minimum 16px */
+  font-size: 16px !important;
+  /* Prevent double-tap zoom */
+  touch-action: manipulation;
+  /* Prevent text size adjustment */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Prevent zoom on all interactive elements */
+button,
+a,
+label {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }

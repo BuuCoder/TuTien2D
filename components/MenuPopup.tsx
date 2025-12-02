@@ -88,6 +88,7 @@ const MenuPopup = () => {
             onClick={handleClose}
         >
             <div
+                className="menu-popup-content"
                 style={{
                     background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 240, 255, 0.95))',
                     backdropFilter: 'blur(20px)',
@@ -103,6 +104,36 @@ const MenuPopup = () => {
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
+                <style>{`
+                    /* Mobile landscape responsive */
+                    @media (max-height: 500px) and (orientation: landscape) {
+                        .menu-popup-content {
+                            padding: 16px !important;
+                            max-height: 90vh !important;
+                            max-width: 90% !important;
+                        }
+                        .menu-popup-content h2 {
+                            font-size: 18px !important;
+                            margin-bottom: 12px !important;
+                        }
+                        .menu-popup-content button {
+                            padding: 10px 16px !important;
+                            font-size: 14px !important;
+                        }
+                        .menu-item {
+                            padding: 10px !important;
+                        }
+                        .menu-item-icon {
+                            font-size: 24px !important;
+                        }
+                        .menu-item-text {
+                            font-size: 13px !important;
+                        }
+                        .menu-item-price {
+                            font-size: 12px !important;
+                        }
+                    }
+                `}</style>
                 {/* Close Button */}
                 <button
                     onClick={handleClose}
@@ -139,7 +170,7 @@ const MenuPopup = () => {
 
                 {!selectedCategory ? (
                     <>
-                        <h2 style={{
+                        <h2 className="menu-title" style={{
                             margin: '0 0 24px 0',
                             color: '#2c3e50',
                             fontSize: '28px',
@@ -182,6 +213,7 @@ const MenuPopup = () => {
                             )) : activeMenu.quests?.map((quest) => (
                                 <div
                                     key={quest.id}
+                                    className="menu-item"
                                     style={{
                                         display: 'flex',
                                         alignItems: 'flex-start',
@@ -204,15 +236,15 @@ const MenuPopup = () => {
                                     }}
                                 >
                                     <div style={{ display: 'flex', gap: '14px', flex: 1 }}>
-                                        <span style={{ fontSize: '36px' }}>{quest.image}</span>
+                                        <span className="menu-item-icon" style={{ fontSize: '36px' }}>{quest.image}</span>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: '600', color: '#2c3e50', fontSize: '16px', marginBottom: '6px' }}>
+                                            <div className="menu-item-text" style={{ fontWeight: '600', color: '#2c3e50', fontSize: '16px', marginBottom: '6px' }}>
                                                 {quest.name}
                                             </div>
-                                            <div style={{ color: '#7f8c8d', fontSize: '13px', lineHeight: '1.5', marginBottom: '8px' }}>
+                                            <div className="menu-item-text" style={{ color: '#7f8c8d', fontSize: '13px', lineHeight: '1.5', marginBottom: '8px' }}>
                                                 {quest.description}
                                             </div>
-                                            <div style={{ color: '#f39c12', fontSize: '14px', fontWeight: '600' }}>
+                                            <div className="menu-item-price" style={{ color: '#f39c12', fontSize: '14px', fontWeight: '600' }}>
                                                 🏆 Phần thưởng: {quest.reward} vàng
                                             </div>
                                         </div>
