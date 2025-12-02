@@ -146,6 +146,43 @@ const MultiplayerManager = () => {
 
         socketInstance.on('player_left', (playerId: string) => {
             console.log('Player left:', playerId);
+            
+            // Check if this player was in active PK session
+            const state = useGameStore.getState();
+            if (state.activePKSessions.includes(playerId)) {
+                console.log('[PK] Opponent disconnected during PK:', playerId);
+                
+                // Remove from PK session
+                state.removePKSession(playerId);
+                
+                // Restore HP/Mana (winner gets full recovery)
+                state.setPlayerStats({
+                    currentHp: state.playerStats.maxHp,
+                    currentMana: state.playerStats.maxMana
+                });
+                
+                // Emit HP update
+                if (socketInstance) {
+                    socketInstance.emit('update_hp', {
+                        hp: state.playerStats.maxHp,
+                        maxHp: state.playerStats.maxHp,
+                        opponentId: null,
+                        isPK: false
+                    });
+                }
+                
+                // Show victory notification
+                setNotification({
+                    message: '🏆 Đối thủ đã ngắt kết nối - Bạn thắng! 💚 HP đã hồi phục!',
+                    type: 'success'
+                });
+                
+                // Disable PK mode if no more active sessions
+                if (state.activePKSessions.length === 0) {
+                    state.setIsPKMode(false);
+                }
+            }
+            
             removeOtherPlayer(playerId);
         });
 
