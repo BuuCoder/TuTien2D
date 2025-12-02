@@ -49,11 +49,15 @@ const OtherPlayers = () => {
             {Array.from(otherPlayers.values())
                 .filter((player) => player.mapId === currentMapId) // Chỉ hiển thị người chơi cùng map
                 .map((player) => {
+                // Force GIF reload when action changes by adding timestamp
                 const gifPath = player.action === 'idle'
                     ? `/assets/knight/idle/down_idle.gif`
                     : `/assets/knight/${player.action}/${player.direction}_${player.action}.gif`;
 
                 const finalGifPath = player.direction ? gifPath : `/assets/knight/idle/down_idle.gif`;
+                
+                // Add cache buster to force reload when action changes
+                const gifWithCache = `${finalGifPath}?t=${player.action}`;
 
                 // Check if player is nearby
                 const distance = calculateDistance(
@@ -73,7 +77,7 @@ const OtherPlayers = () => {
                             top: player.y,
                             width: '64px',
                             height: '64px',
-                            backgroundImage: `url(${finalGifPath})`,
+                            backgroundImage: `url(${gifWithCache})`,
                             backgroundSize: 'contain',
                             backgroundRepeat: 'no-repeat',
                             transform: 'translate(-50%, -50%)',

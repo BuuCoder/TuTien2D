@@ -20,6 +20,22 @@ const CombatManager = () => {
         user
     } = useGameStore();
 
+    // Helper function để emit HP update với PK check
+    const emitHPUpdate = useCallback((hp: number, maxHp: number) => {
+        if (!socket) return;
+        
+        const activeSessions = useGameStore.getState().activePKSessions;
+        const opponentId = activeSessions.length > 0 ? activeSessions[0] : null;
+        const isPK = opponentId !== null;
+        
+        socket.emit('update_hp', {
+            hp,
+            maxHp,
+            opponentId,
+            isPK
+        });
+    }, [socket]);
+
     // Handle skill usage with hotkeys and custom events
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -159,12 +175,16 @@ const CombatManager = () => {
         // Add cooldown
         addSkillCooldown(skillId, skill.cooldown);
 
-        // Emit skill use
-        console.log('[CombatManager] Emitting use_skill:', { skillId, targetId, position: playerPosition });
+        // Emit skill use với isPK flag
+        const currentPKSessions = useGameStore.getState().activePKSessions;
+        const isPKSkill = targetId && currentPKSessions.includes(targetId);
+        
+        console.log('[CombatManager] Emitting use_skill:', { skillId, targetId, position: playerPosition, isPK: isPKSkill });
         socket.emit('use_skill', {
             skillId,
             targetId,
-            position: playerPosition
+            position: playerPosition,
+            isPK: isPKSkill // Flag để server biết đây là PK
         });
 
         // Apply self-effects
@@ -194,12 +214,16 @@ const CombatManager = () => {
             console.log('[CombatManager] Dealing damage:', finalDamage, 'to', targetId, 'type:', targetType);
             
             if (targetType === 'player') {
-                // Damage to player
+                // Damage to player với isPK flag
+                const activeSessions = useGameStore.getState().activePKSessions;
+                const isPKDamage = activeSessions.includes(targetId);
+                
                 socket.emit('take_damage', {
                     damage: finalDamage,
                     attackerId: socket.id,
                     targetId: targetId,
-                    skillId
+                    skillId,
+                    isPK: isPKDamage // Flag để server biết đây là PK
                 });
             } else {
                 // Damage to monster
@@ -219,10 +243,7 @@ const CombatManager = () => {
         if (!socket || !user) return;
 
         const timer = setTimeout(() => {
-            socket.emit('update_hp', {
-                hp: playerStats.currentHp,
-                maxHp: playerStats.maxHp
-            });
+            emitHPUpdate(playerStats.currentHp, playerStats.maxHp);
             console.log('[Combat] Broadcasted initial HP');
         }, 1000);
 
@@ -305,10 +326,7 @@ const CombatManager = () => {
                     currentMana: state.playerStats.maxMana
                 });
                 
-                socket.emit('update_hp', {
-                    hp: state.playerStats.maxHp,
-                    maxHp: state.playerStats.maxHp
-                });
+                emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
                 
                 state.setNotification({
                     message: data.message + ' 💚 HP đã hồi phục!',
@@ -386,10 +404,7 @@ const CombatManager = () => {
                 addDamageIndicator(playerPosition.x, playerPosition.y, actualDamage);
 
                 // Broadcast our HP to others
-                socket.emit('update_hp', {
-                    hp: newHp,
-                    maxHp: playerStats.maxHp
-                });
+                emitHPUpdate(newHp, playerStats.maxHp);
 
                 // Apply skill effects
                 const skill = SKILLS[data.skillId];
@@ -403,9 +418,13 @@ const CombatManager = () => {
 
                 // Check death
                 if (newHp <= 0) {
+                    const activeSessions = useGameStore.getState().activePKSessions;
+                    const isPKDeath = activeSessions.includes(data.attackerId);
+                    
                     socket.emit('player_death', { 
                         killerId: data.attackerId,
-                        killerSocketId: data.attackerId 
+                        killerSocketId: data.attackerId,
+                        isPK: isPKDeath // Flag để server biết đây là PK
                     });
                     
                     setNotification({ message: '💀 Bạn đã thua!', type: 'error' });
@@ -439,7 +458,7 @@ const CombatManager = () => {
                             currentHp: maxHp,
                             currentMana: maxMana 
                         });
-                        socket.emit('update_hp', { hp: maxHp, maxHp });
+                        emitHPUpdate(maxHp, maxHp);
                         setNotification({ message: '🏥 Hồi sinh tại Làng Tân Thủ!', type: 'info' });
                     }, 3000);
                 }
@@ -474,10 +493,7 @@ const CombatManager = () => {
                     currentMana: state.playerStats.maxMana
                 });
                 
-                socket.emit('update_hp', {
-                    hp: state.playerStats.maxHp,
-                    maxHp: state.playerStats.maxHp
-                });
+                emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
                 
                 setNotification({ 
                     message: `🏆 Bạn đã chiến thắng ${data.playerUsername}! 💚 HP đã hồi phục!`, 
@@ -507,10 +523,7 @@ const CombatManager = () => {
                 currentMana: state.playerStats.maxMana
             });
             
-            socket.emit('update_hp', {
-                hp: state.playerStats.maxHp,
-                maxHp: state.playerStats.maxHp
-            });
+            emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
             
             setNotification({
                 message: '🏆 Đối thủ đã bỏ chạy! Bạn thắng! 💚 HP đã hồi phục!',
@@ -538,10 +551,7 @@ const CombatManager = () => {
                 currentMana: state.playerStats.maxMana
             });
             
-            socket.emit('update_hp', {
-                hp: state.playerStats.maxHp,
-                maxHp: state.playerStats.maxHp
-            });
+            emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
 
             if (data.winner === socket.id) {
                 setNotification({

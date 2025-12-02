@@ -56,6 +56,7 @@ interface User {
   id: number;
   username: string;
   sessionId: string;
+  socketToken: string; // JWT token cho socket authentication
   gold: number;
   level: number;
 }
@@ -303,9 +304,22 @@ export const useGameStore = create<GameState>((set) => ({
     attack: 10,
     defense: 5,
   },
-  setPlayerStats: (stats) => set((state) => ({
-    playerStats: { ...state.playerStats, ...stats }
-  })),
+  setPlayerStats: (stats) => {
+    set((state) => ({
+      playerStats: { ...state.playerStats, ...stats }
+    }));
+    
+    // Lưu HP/Mana vào localStorage
+    if (typeof window !== 'undefined') {
+      const currentStats = useGameStore.getState().playerStats;
+      localStorage.setItem('tutien2d_playerStats', JSON.stringify({
+        currentHp: stats.currentHp ?? currentStats.currentHp,
+        currentMana: stats.currentMana ?? currentStats.currentMana,
+        maxHp: stats.maxHp ?? currentStats.maxHp,
+        maxMana: stats.maxMana ?? currentStats.maxMana,
+      }));
+    }
+  },
   skillCooldowns: [],
   addSkillCooldown: (skillId, duration) => set((state) => ({
     skillCooldowns: [
@@ -383,17 +397,25 @@ export const useGameStore = create<GameState>((set) => ({
 
 // Khôi phục dữ liệu từ localStorage khi khởi động
 if (typeof window !== 'undefined') {
-  // Khôi phục user
-  const savedUser = localStorage.getItem('tutien2d_user');
-  if (savedUser) {
-    try {
-      const user = JSON.parse(savedUser);
-      useGameStore.setState({ user });
-    } catch (e) {
-      console.error('Failed to parse saved user:', e);
-      localStorage.removeItem('tutien2d_user');
+  // Import validator
+  import('./tokenValidator').then(({ validateStoredToken }) => {
+    // Validate token trước khi khôi phục user (với autoClear = true)
+    if (validateStoredToken(true)) {
+      const savedUser = localStorage.getItem('tutien2d_user');
+      if (savedUser) {
+        try {
+          const user = JSON.parse(savedUser);
+          useGameStore.setState({ user });
+          console.log('[Store] User restored from localStorage');
+        } catch (e) {
+          console.error('Failed to parse saved user:', e);
+          localStorage.removeItem('tutien2d_user');
+        }
+      }
+    } else {
+      console.log('[Store] Token invalid, user not restored');
     }
-  }
+  });
 
   // Khôi phục map hiện tại
   const savedMap = localStorage.getItem('tutien2d_currentMap');
@@ -410,6 +432,26 @@ if (typeof window !== 'undefined') {
     } catch (e) {
       console.error('Failed to parse saved position:', e);
       localStorage.removeItem('tutien2d_playerPosition');
+    }
+  }
+
+  // Khôi phục HP/Mana
+  const savedStats = localStorage.getItem('tutien2d_playerStats');
+  if (savedStats) {
+    try {
+      const stats = JSON.parse(savedStats);
+      useGameStore.setState({ 
+        playerStats: {
+          ...useGameStore.getState().playerStats,
+          currentHp: stats.currentHp,
+          currentMana: stats.currentMana,
+          maxHp: stats.maxHp || 500,
+          maxMana: stats.maxMana || 200,
+        }
+      });
+    } catch (e) {
+      console.error('Failed to parse saved stats:', e);
+      localStorage.removeItem('tutien2d_playerStats');
     }
   }
 }

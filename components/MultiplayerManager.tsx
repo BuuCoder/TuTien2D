@@ -40,27 +40,26 @@ const MultiplayerManager = () => {
         });
     };
 
-    // Effect để validate session khi có socket và user
+    // Effect để validate session khi có socket và user (gửi kèm token)
     useEffect(() => {
         if (socket && isConnected && user) {
             console.log('Validating session for user:', user.username);
             socket.emit('validate_session', {
                 userId: user.id,
                 sessionId: user.sessionId,
-                username: user.username
+                username: user.username,
+                token: user.socketToken // Gửi JWT token để xác thực
             });
         }
     }, [socket, isConnected, user]);
 
     useEffect(() => {
-        const isProduction = process.env.NODE_ENV === 'production';
-        const socketUrl = isProduction ? 'https://socket.phatdatbatdongsan.com' : undefined;
+        // Socket server runs on the same server as Next.js (server.js)
+        // No need for separate socket URL
+        console.log('Connecting to socket server...');
 
-        console.log('Connecting to socket at:', socketUrl || 'localhost');
-
-        const socketInstance = io(socketUrl, {
+        const socketInstance = io({
             transports: ['websocket'],
-            secure: true,
             reconnectionAttempts: 5,
         });
 
@@ -154,6 +153,23 @@ const MultiplayerManager = () => {
             setNotification({ message, type: 'error' });
         });
 
+        socketInstance.on('auth_error', ({ message }: any) => {
+            console.log('[Auth] Token invalid, clearing session');
+            setNotification({ 
+                message: message + ' - Vui lòng đăng nhập lại', 
+                type: 'error' 
+            });
+            
+            // Clear localStorage để xóa token cũ
+            localStorage.removeItem('tutien2d_user');
+            localStorage.removeItem('tutien2d_playerStats');
+            
+            // Đăng xuất user
+            setTimeout(() => {
+                useGameStore.getState().setUser(null);
+            }, 2000);
+        });
+
         socketInstance.on('error', (message: string) => {
             setNotification({ message, type: 'error' });
         });
@@ -167,19 +183,27 @@ const MultiplayerManager = () => {
 
     // Broadcast player movement with throttling using ref
     const lastBroadcastTime = React.useRef(0);
+    const lastAction = React.useRef(playerAction);
     
     useEffect(() => {
         if (!socket || !isConnected || !currentChannel) return;
 
         const now = Date.now();
         const timeSinceLastBroadcast = now - lastBroadcastTime.current;
+        const actionChanged = lastAction.current !== playerAction;
 
-        // Throttle: only broadcast every 50ms
-        if (timeSinceLastBroadcast < 50) {
+        // Always broadcast if action changed (idle/run), otherwise throttle
+        if (!actionChanged && timeSinceLastBroadcast < 50) {
             return;
         }
 
         lastBroadcastTime.current = now;
+        lastAction.current = playerAction;
+        
+        // Log when action changes
+        if (actionChanged) {
+            console.log('[Multiplayer] Action changed:', lastAction.current, '->', playerAction);
+        }
         
         socket.emit('player_move', {
             x: playerPosition.x,

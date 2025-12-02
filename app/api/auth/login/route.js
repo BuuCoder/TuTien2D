@@ -1,6 +1,7 @@
 import db from '@/lib/db';
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
+import { generateToken } from '@/lib/jwt.mjs';
 
 export async function POST(req) {
     try {
@@ -54,6 +55,9 @@ export async function POST(req) {
             [user.id]
         );
 
+        // Tạo JWT token cho socket authentication
+        const socketToken = generateToken(user.id, user.username, sessionId);
+
         return NextResponse.json({
             success: true,
             user: {
@@ -62,6 +66,7 @@ export async function POST(req) {
                 email: user.email
             },
             sessionId,
+            socketToken, // Token mã hóa cho socket
             inventory: inventory[0] || { gold: 0, items: [] },
             stats: stats[0] || { level: 1, experience: 0, hp: 100, max_hp: 100 }
         });

@@ -18,6 +18,8 @@ import CombatUI from './CombatUI';
 import CombatManager from './CombatManager';
 import PKRequestPopup from './PKRequestPopup';
 import MonsterManager from './MonsterManager';
+import AutoSaveStats from './AutoSaveStats';
+import TokenExpiredNotice from './TokenExpiredNotice';
 
 const GameContent = () => {
     const { user, currentMapId } = useGameStore();
@@ -35,6 +37,8 @@ const GameContent = () => {
 
     return (
         <>
+            {/* TokenExpiredNotice chỉ hiện khi token thực sự expired */}
+            {!user && <TokenExpiredNotice />}
             <GameMap />
             <Instructions />
             <Joystick />
@@ -49,6 +53,7 @@ const GameContent = () => {
             <CombatUI />
             <CombatManager />
             <MonsterManager />
+            <AutoSaveStats />
         </>
     );
 };

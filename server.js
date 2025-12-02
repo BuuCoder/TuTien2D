@@ -1,8 +1,14 @@
+// Load environment variables
+require('dotenv').config();
+
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 const db = require('./lib/db');
+const { verifyToken } = require('./lib/jwt');
+const rateLimiter = require('./lib/rateLimiter');
+const validator = require('./lib/validator');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -61,12 +67,21 @@ app.prepare().then(() => {
         });
     });
 
+    // Cleanup rate limiter mỗi 5 phút
+    setInterval(() => {
+        rateLimiter.cleanup();
+    }, 5 * 60 * 1000);
+
     io.on('connection', (socket) => {
         console.log('Client connected:', socket.id);
         let currentChannel = null;
         let userId = null;
         let sessionId = null;
         let username = null;
+        let isAuthenticated = false; // Flag để kiểm tra đã xác thực chưa
+        let lastPosition = { x: 0, y: 0 };
+        let lastMoveTime = Date.now();
+        let skillCooldowns = new Map(); // Server-side skill cooldowns
 
         // Request monsters for a map (register early)
         socket.on('request_monsters', ({ mapId }) => {
@@ -87,13 +102,40 @@ app.prepare().then(() => {
             });
         });
 
-        // Validate session
-        socket.on('validate_session', async ({ userId: uid, sessionId: sid, username: uname }) => {
+        // Validate session với JWT token
+        socket.on('validate_session', async ({ userId: uid, sessionId: sid, username: uname, token }) => {
+            // Kiểm tra token
+            if (!token) {
+                console.log(`[Auth] No token provided for user ${uid}`);
+                socket.emit('auth_error', { message: 'Token không hợp lệ' });
+                socket.disconnect(true);
+                return;
+            }
+
+            // Xác thực token
+            const tokenResult = verifyToken(token);
+            if (!tokenResult.valid) {
+                console.log(`[Auth] Invalid token for user ${uid}: ${tokenResult.error}`);
+                socket.emit('auth_error', { message: 'Token không hợp lệ hoặc đã hết hạn' });
+                socket.disconnect(true);
+                return;
+            }
+
+            // Kiểm tra token data khớp với thông tin gửi lên
+            const tokenData = tokenResult.data;
+            if (tokenData.userId !== uid || tokenData.username !== uname || tokenData.sessionId !== sid) {
+                console.log(`[Auth] Token data mismatch for user ${uid}`);
+                socket.emit('auth_error', { message: 'Thông tin xác thực không khớp' });
+                socket.disconnect(true);
+                return;
+            }
+
             userId = uid;
             sessionId = sid;
             username = uname;
+            isAuthenticated = true;
 
-            console.log(`[Session Validation] User ${userId} (${username}) attempting to connect`);
+            console.log(`[Session Validation] User ${userId} (${username}) authenticated successfully`);
 
             const existingSession = userSessions.get(userId);
             if (existingSession && existingSession.socketId !== socket.id) {
@@ -112,6 +154,11 @@ app.prepare().then(() => {
 
         // Join channel
         socket.on('join_channel', ({ channelId, playerData }) => {
+            if (!isAuthenticated) {
+                socket.emit('error', 'Chưa xác thực');
+                return;
+            }
+
             if (![1, 2, 3].includes(channelId)) {
                 socket.emit('error', 'Invalid channel');
                 return;
@@ -159,9 +206,37 @@ app.prepare().then(() => {
             console.log(`User ${userId} (${username}) joined channel ${channelId}`);
         });
 
-        // Player movement
+        // Player movement với validation và rate limiting
         socket.on('player_move', (data) => {
-            if (!currentChannel) return;
+            if (!isAuthenticated || !currentChannel) return;
+
+            // Rate limiting
+            const rateCheck = rateLimiter.check(userId, 'player_move');
+            if (!rateCheck.allowed) {
+                socket.emit('error', rateCheck.reason);
+                return;
+            }
+
+            // Validate position
+            const posCheck = validator.validatePosition(data.x, data.y, 2000, 2000);
+            if (!posCheck.valid) {
+                console.log(`[Security] Invalid position from ${username}: ${posCheck.reason}`);
+                return;
+            }
+
+            // Validate movement speed (chống teleport)
+            const now = Date.now();
+            const deltaTime = now - lastMoveTime;
+            if (deltaTime > 10) { // Chỉ check nếu > 10ms
+                const moveCheck = validator.validateMovement(lastPosition, data, 10, deltaTime);
+                if (!moveCheck.valid) {
+                    console.log(`[Security] Suspicious movement from ${username}: ${moveCheck.reason}`);
+                    // Không return, chỉ log để tránh false positive do lag
+                }
+            }
+
+            lastPosition = { x: data.x, y: data.y };
+            lastMoveTime = now;
 
             const player = channels[currentChannel].get(socket.id);
             if (player) {
@@ -181,14 +256,22 @@ app.prepare().then(() => {
             }
         });
 
-        // PK Request
+        // PK Request - Chỉ gửi cho người được mời
         socket.on('send_pk_request', ({ requestId, toSocketId, toUserId, toUsername }) => {
-            if (!currentChannel || !userId || !username) return;
+            if (!isAuthenticated || !currentChannel || !userId || !username) return;
+
+            // Rate limiting
+            const rateCheck = rateLimiter.check(userId, 'send_pk_request');
+            if (!rateCheck.allowed) {
+                socket.emit('error', rateCheck.reason);
+                return;
+            }
 
             console.log(`[PK] ${username} sent PK request to ${toUsername}`);
 
             const targetSocket = io.sockets.sockets.get(toSocketId);
             if (targetSocket) {
+                // CHỈ gửi cho người được mời, không broadcast
                 targetSocket.emit('pk_request', {
                     requestId,
                     fromUserId: userId,
@@ -202,14 +285,15 @@ app.prepare().then(() => {
             }
         });
 
-        // PK Request Response
+        // PK Request Response - Chỉ gửi cho người gửi request
         socket.on('pk_request_response', ({ requestId, fromSocketId, accepted }) => {
-            if (!currentChannel || !userId || !username) return;
+            if (!isAuthenticated || !currentChannel || !userId || !username) return;
 
             console.log(`[PK] ${username} ${accepted ? 'accepted' : 'declined'} PK from ${fromSocketId}`);
 
             const requesterSocket = io.sockets.sockets.get(fromSocketId);
             if (requesterSocket) {
+                // CHỈ gửi cho người gửi request, không broadcast
                 requesterSocket.emit('pk_request_response', {
                     requestId,
                     accepted,
@@ -222,14 +306,40 @@ app.prepare().then(() => {
             }
         });
 
-        // Combat: Use skill
-        socket.on('use_skill', ({ skillId, targetId, position }) => {
-            if (!currentChannel) return;
+        // Combat: Use skill - Chỉ gửi cho target nếu có
+        socket.on('use_skill', ({ skillId, targetId, position, isPK }) => {
+            if (!isAuthenticated || !currentChannel) return;
 
-            console.log(`[Combat] ${username} used skill ${skillId} on ${targetId || 'position'}`);
+            // Rate limiting
+            const rateCheck = rateLimiter.check(userId, 'use_skill');
+            if (!rateCheck.allowed) {
+                socket.emit('error', rateCheck.reason);
+                return;
+            }
 
-            // Broadcast skill use to all players in channel
-            io.to(`channel_${currentChannel}`).emit('skill_used', {
+            // Validate skill
+            const skillCheck = validator.validateSkillUsage(skillId, {}, skillCooldowns);
+            if (!skillCheck.valid) {
+                console.log(`[Security] Invalid skill usage from ${username}: ${skillCheck.reason}`);
+                return;
+            }
+
+            // Set server-side cooldown
+            const cooldownDurations = {
+                'basic-attack': 1000,
+                'slash': 2000,
+                'charge': 3000,
+                'fireball': 4000,
+                'ice-spike': 5000,
+                'heal': 10000,
+                'holy-strike': 8000,
+                'block': 5000
+            };
+            skillCooldowns.set(skillId, Date.now() + (cooldownDurations[skillId] || 1000));
+
+            console.log(`[Combat] ${username} used skill ${skillId} on ${targetId || 'position'} (PK: ${isPK})`);
+
+            const skillData = {
                 casterId: socket.id,
                 casterUserId: userId,
                 casterUsername: username,
@@ -237,14 +347,28 @@ app.prepare().then(() => {
                 targetId,
                 position,
                 timestamp: Date.now()
-            });
+            };
+
+            // Nếu là PK, chỉ gửi cho 2 người chơi
+            if (isPK && targetId) {
+                // Gửi cho target
+                const targetSocket = io.sockets.sockets.get(targetId);
+                if (targetSocket) {
+                    targetSocket.emit('skill_used', skillData);
+                }
+                // Gửi lại cho caster (để hiển thị animation)
+                socket.emit('skill_used', skillData);
+            } else {
+                // Broadcast cho tất cả trong channel (PvE hoặc không có target)
+                io.to(`channel_${currentChannel}`).emit('skill_used', skillData);
+            }
         });
 
-        // Combat: Take damage
-        socket.on('take_damage', ({ damage, attackerId, targetId, skillId }) => {
-            if (!currentChannel) return;
+        // Combat: Take damage - Chỉ gửi cho target
+        socket.on('take_damage', ({ damage, attackerId, targetId, skillId, isPK }) => {
+            if (!isAuthenticated || !currentChannel) return;
 
-            console.log(`[Combat] Damage request: ${damage} from ${attackerId} (${socket.id}) to ${targetId}`);
+            console.log(`[Combat] Damage request: ${damage} from ${attackerId} (${socket.id}) to ${targetId} (PK: ${isPK})`);
 
             // Verify attacker is the one sending
             if (attackerId !== socket.id) {
@@ -261,6 +385,7 @@ app.prepare().then(() => {
                     damage,
                     attackerId,
                     skillId,
+                    isPK,
                     timestamp: Date.now()
                 });
             } else {
@@ -268,23 +393,35 @@ app.prepare().then(() => {
             }
         });
 
-        // Combat: Player death
-        socket.on('player_death', ({ killerId }) => {
-            if (!currentChannel) return;
+        // Combat: Player death - Chỉ gửi cho killer nếu là PK
+        socket.on('player_death', ({ killerId, isPK }) => {
+            if (!isAuthenticated || !currentChannel) return;
 
-            console.log(`[Combat] ${username} was killed by ${killerId}`);
+            console.log(`[Combat] ${username} was killed by ${killerId} (PK: ${isPK})`);
 
-            io.to(`channel_${currentChannel}`).emit('player_died', {
+            const deathData = {
                 playerId: socket.id,
                 playerUsername: username,
                 killerId,
+                isPK,
                 timestamp: Date.now()
-            });
+            };
+
+            // Nếu là PK, chỉ gửi cho killer
+            if (isPK && killerId) {
+                const killerSocket = io.sockets.sockets.get(killerId);
+                if (killerSocket) {
+                    killerSocket.emit('player_died', deathData);
+                }
+            } else {
+                // Broadcast cho tất cả trong channel (PvE)
+                io.to(`channel_${currentChannel}`).emit('player_died', deathData);
+            }
         });
 
-        // Combat: HP Update
-        socket.on('update_hp', ({ hp, maxHp }) => {
-            if (!currentChannel) return;
+        // Combat: HP Update - Chỉ gửi cho opponent nếu đang PK
+        socket.on('update_hp', ({ hp, maxHp, opponentId, isPK }) => {
+            if (!isAuthenticated || !currentChannel) return;
 
             const player = channels[currentChannel].get(socket.id);
             if (player) {
@@ -293,21 +430,32 @@ app.prepare().then(() => {
                 channels[currentChannel].set(socket.id, player);
             }
 
-            // Broadcast HP update to all players
-            io.to(`channel_${currentChannel}`).emit('player_hp_updated', {
+            const hpData = {
                 playerId: socket.id,
                 hp,
                 maxHp,
                 timestamp: Date.now()
-            });
+            };
+
+            // Nếu đang PK, chỉ gửi cho opponent
+            if (isPK && opponentId) {
+                const opponentSocket = io.sockets.sockets.get(opponentId);
+                if (opponentSocket) {
+                    opponentSocket.emit('player_hp_updated', hpData);
+                }
+            } else {
+                // Broadcast cho tất cả trong channel
+                io.to(`channel_${currentChannel}`).emit('player_hp_updated', hpData);
+            }
         });
 
-        // PK Forfeit (player left map)
+        // PK Forfeit (player left map) - Chỉ gửi cho opponent
         socket.on('pk_forfeit', ({ opponentId, reason }) => {
-            if (!currentChannel) return;
+            if (!isAuthenticated || !currentChannel) return;
 
             console.log(`[PK] ${username} forfeited against ${opponentId} (${reason})`);
 
+            // CHỈ gửi cho opponent
             const opponentSocket = io.sockets.sockets.get(opponentId);
             if (opponentSocket) {
                 opponentSocket.emit('pk_forfeit', {
@@ -318,12 +466,13 @@ app.prepare().then(() => {
             }
         });
 
-        // PK Ended
+        // PK Ended - Chỉ gửi cho opponent
         socket.on('pk_ended', ({ opponentId, winner, reason }) => {
-            if (!currentChannel) return;
+            if (!isAuthenticated || !currentChannel) return;
 
             console.log(`[PK] Battle ended between ${socket.id} and ${opponentId}, winner: ${winner}`);
 
+            // CHỈ gửi cho opponent
             const opponentSocket = io.sockets.sockets.get(opponentId);
             if (opponentSocket) {
                 opponentSocket.emit('pk_ended', {
@@ -366,13 +515,30 @@ app.prepare().then(() => {
 
         // Chat messages (per map)
         socket.on('send_chat', async ({ message, mapId }) => {
-            if (!userId || !username || !mapId || !currentChannel) return;
+            if (!isAuthenticated || !userId || !username || !mapId || !currentChannel) return;
+
+            // Rate limiting
+            const rateCheck = rateLimiter.check(userId, 'send_chat');
+            if (!rateCheck.allowed) {
+                socket.emit('error', rateCheck.reason);
+                return;
+            }
+
+            // Validate message
+            const msgCheck = validator.validateChatMessage(message);
+            if (!msgCheck.valid) {
+                socket.emit('error', msgCheck.reason);
+                return;
+            }
+
+            // Sanitize message
+            const sanitizedMessage = validator.sanitizeString(message, 500);
 
             const chatMessage = {
                 id: `${socket.id}-${Date.now()}`,
                 userId: userId,
                 username: username,
-                message: message,
+                message: sanitizedMessage,
                 mapId: mapId,
                 timestamp: Date.now()
             };
@@ -381,7 +547,7 @@ app.prepare().then(() => {
             try {
                 await db.query(
                     'INSERT INTO chat_messages (user_id, username, channel_id, map_id, message) VALUES (?, ?, ?, ?, ?)',
-                    [userId, username, currentChannel, mapId, message]
+                    [userId, username, currentChannel, mapId, sanitizedMessage]
                 );
             } catch (err) {
                 console.error('Error saving chat:', err);
@@ -408,12 +574,19 @@ app.prepare().then(() => {
                 }
             });
 
-            console.log(`[Chat] ${username} on ${mapId}: ${message}`);
+            console.log(`[Chat] ${username} on ${mapId}: ${sanitizedMessage}`);
         });
 
         // Friend requests
         socket.on('send_friend_request', async ({ toUserId, toUsername }) => {
-            if (!userId || !username) return;
+            if (!isAuthenticated || !userId || !username) return;
+
+            // Rate limiting
+            const rateCheck = rateLimiter.check(userId, 'send_friend_request');
+            if (!rateCheck.allowed) {
+                socket.emit('error', rateCheck.reason);
+                return;
+            }
 
             // Kiểm tra xem đã là bạn bè chưa
             try {
@@ -521,6 +694,14 @@ app.prepare().then(() => {
 
         // Player attacks monster
         socket.on('attack_monster', ({ monsterId, damage }) => {
+            if (!isAuthenticated) return;
+
+            // Rate limiting
+            const rateCheck = rateLimiter.check(userId, 'attack_monster');
+            if (!rateCheck.allowed) {
+                return; // Silent fail để không spam error
+            }
+
             const monster = monsterStates.get(monsterId);
             if (!monster || monster.isDead) return;
 
@@ -617,6 +798,9 @@ app.prepare().then(() => {
                 if (session && session.socketId === socket.id) {
                     userSessions.delete(userId);
                 }
+                
+                // Clear rate limiter
+                rateLimiter.clear(userId);
             }
 
             console.log('Client disconnected:', socket.id);
