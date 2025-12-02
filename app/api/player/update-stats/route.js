@@ -43,7 +43,7 @@ export async function POST(req) {
 
         // Update stats in database
         await db.query(
-            'UPDATE user_stats SET hp = ?, mana = ? WHERE user_id = ?',
+            'UPDATE user_stats SET hp = ?, mp = ? WHERE user_id = ?',
             [currentHp, currentMana, userId]
         );
 
