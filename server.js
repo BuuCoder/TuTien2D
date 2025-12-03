@@ -771,31 +771,58 @@ app.prepare().then(() => {
         });
 
         // Pickup gold from dead monster
-        socket.on('pickup_gold', ({ monsterId }) => {
-            if (!currentChannel) return;
+        socket.on('pickup_gold', async ({ monsterId }) => {
+            if (!currentChannel || !userId) return;
             
             const channelMonsters = monsterStates[currentChannel];
             const monster = channelMonsters.get(monsterId);
             
+            // Validate: Monster phải chết và có gold
             if (!monster || !monster.isDead || !monster.goldDrop) {
+                console.log(`[Gold] Invalid pickup attempt by ${username}`);
                 return;
             }
 
             const goldAmount = monster.goldDrop;
-            console.log(`[Monster Ch${currentChannel}] ${username} picked up ${goldAmount} gold from ${monsterId}`);
-
+            
+            // Xóa gold drop để không ai nhặt lại
             delete monster.goldDrop;
 
-            socket.emit('gold_received', {
-                monsterId,
-                amount: goldAmount
-            });
+            try {
+                // Cập nhật gold trong database (SERVER-SIDE)
+                const [currentInventory] = await db.query(
+                    'SELECT gold FROM user_inventory WHERE user_id = ?',
+                    [userId]
+                );
 
-            io.to(`channel_${currentChannel}`).emit('gold_picked_up', {
-                monsterId,
-                playerId: socket.id,
-                playerName: username
-            });
+                const currentGold = currentInventory[0]?.gold || 0;
+                const newGold = currentGold + goldAmount;
+
+                await db.query(
+                    'UPDATE user_inventory SET gold = ? WHERE user_id = ?',
+                    [newGold, userId]
+                );
+
+                console.log(`[Gold Ch${currentChannel}] ${username} picked up ${goldAmount} gold (${currentGold} → ${newGold})`);
+
+                // Gửi gold mới cho client (từ database)
+                socket.emit('gold_received', {
+                    monsterId,
+                    amount: goldAmount,
+                    newGold: newGold  // Tổng gold mới từ server
+                });
+
+                // Thông báo cho các client khác
+                io.to(`channel_${currentChannel}`).emit('gold_picked_up', {
+                    monsterId,
+                    playerId: socket.id,
+                    playerName: username
+                });
+
+            } catch (error) {
+                console.error('[Gold] Error updating gold:', error);
+                socket.emit('error', 'Không thể nhặt vàng');
+            }
         });
 
         // Disconnect

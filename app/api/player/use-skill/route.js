@@ -1,10 +1,11 @@
 import db from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt.mjs';
+import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 
 export async function POST(req) {
     try {
-        const { userId, sessionId, token, skillId, targetType } = await req.json();
+        const { userId, sessionId, token, skillId, targetType } = await parseRequestBody(req);
 
         console.log('[UseSkill] Request:', { userId, sessionId, skillId, targetType });
 

@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node server.js",
     "build": "next build",
-    "start": "NODE_ENV=production node server.js",
+    "build:obfuscate": "next build && node scripts/obfuscate-build.js",
+    "start": "cross-env NODE_ENV=production node server.js",
     "lint": "eslint"
   },
   "dependencies": {
@@ -24,8 +25,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.0.5",
-    "typescript": "^5"
+    "javascript-obfuscator": "^4.1.1",
+    "typescript": "^5",
+    "webpack-obfuscator": "^3.5.1"
   }
 }

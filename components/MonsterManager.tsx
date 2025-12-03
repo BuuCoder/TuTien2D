@@ -3,9 +3,10 @@
 import React, { useEffect } from 'react';
 import { useGameStore } from '@/lib/store';
 import { MAP_MONSTERS } from '@/lib/monsterData';
+import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
 
 const MonsterManager = () => {
-    const { socket, currentMapId, currentChannel, setMonsters, updateMonster, removeMonster, setNotification, addDamageIndicator, playerPosition } = useGameStore();
+    const { socket, currentMapId, currentChannel, setMonsters, updateMonster, removeMonster, setNotification, addDamageIndicator, playerPosition, user } = useGameStore();
 
     // Setup ALL socket listeners first (before any requests)
     useEffect(() => {
@@ -53,43 +54,88 @@ const MonsterManager = () => {
         const handleMonsterAttackedPlayer = (data: any) => {
             if (data.targetSocketId === socket.id) {
                 const state = useGameStore.getState();
-                const newHp = Math.max(0, state.playerStats.currentHp - data.damage);
                 
-                state.setPlayerStats({ currentHp: newHp });
-                addDamageIndicator(playerPosition.x, playerPosition.y, data.damage);
-                
-                socket.emit('update_hp', {
-                    hp: newHp,
-                    maxHp: state.playerStats.maxHp
-                });
-
-                if (newHp <= 0) {
-                    setNotification({
-                        message: '💀 Bạn đã bị quái vật hạ gục!',
-                        type: 'error'
-                    });
-
-                    setTimeout(() => {
-                        state.setCurrentMapId('map1');
-                        state.setPlayerPosition(400, 300);
-                        state.setPlayerStats({
-                            currentHp: state.playerStats.maxHp,
-                            mp: state.playerStats.maxMp
-                        });
-                        socket.emit('update_hp', {
-                            hp: state.playerStats.maxHp,
-                            maxHp: state.playerStats.maxHp
-                        });
-                    }, 3000);
+                // Check if blocking - miễn nhiễm hoàn toàn
+                if (state.isBlocking) {
+                    setNotification({ message: '🛡️ Miễn nhiễm tấn công quái!', type: 'success' });
+                    addDamageIndicator(playerPosition.x, playerPosition.y, 0);
+                    console.log('[Monster] Blocked monster attack!');
+                    return; // Không nhận damage
                 }
+                
+                // Gọi API để take damage từ monster (server validate và update database)
+                (async () => {
+                    try {
+                        const response = await sendObfuscatedRequest('/api/player/take-damage', {
+                            userId: user?.id,
+                            sessionId: user?.sessionId,
+                            token: user?.socketToken,
+                            attackerId: null, // Monster attack
+                            skillId: 'monster-attack'
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            // Update HP từ server
+                            state.setPlayerStats({ currentHp: result.hp });
+                            addDamageIndicator(playerPosition.x, playerPosition.y, result.damage);
+                            
+                            socket.emit('update_hp', {
+                                hp: result.hp,
+                                maxHp: state.playerStats.maxHp
+                            });
+
+                            // Check death
+                            if (result.isDead) {
+                                setNotification({
+                                    message: '💀 Bạn đã bị quái vật hạ gục!',
+                                    type: 'error'
+                                });
+
+                                setTimeout(() => {
+                                    state.setCurrentMapId('map1');
+                                    state.setPlayerPosition(400, 300);
+                                    state.setPlayerStats({
+                                        currentHp: state.playerStats.maxHp,
+                                        mp: state.playerStats.maxMp
+                                    });
+                                    socket.emit('update_hp', {
+                                        hp: state.playerStats.maxHp,
+                                        maxHp: state.playerStats.maxHp
+                                    });
+                                }, 3000);
+                            }
+
+                            console.log('[Monster] Took damage:', result.damage, 'HP:', result.hp);
+                        } else {
+                            console.error('[Monster] Take damage API error:', result.error);
+                        }
+                    } catch (error) {
+                        console.error('[Monster] Take damage API error:', error);
+                    }
+                })();
             }
         };
 
         // Register all listeners
         const handleGoldReceived = (data: any) => {
-            // Player successfully picked up gold
+            // Server đã cập nhật database và gửi gold mới về
             const state = useGameStore.getState();
+            
+            // Update local state
             state.addGold(data.amount);
+            
+            // Update user object với gold từ server (đã được validate)
+            if (state.user && data.newGold !== undefined) {
+                state.setUser({
+                    ...state.user,
+                    gold: data.newGold  // Gold từ server (đã lưu vào database)
+                });
+                
+                console.log('[Gold] Updated from server:', data.newGold);
+            }
+            
             state.setNotification({
                 message: `+${data.amount} 💰 vàng!`,
                 type: 'success'

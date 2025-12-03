@@ -6,28 +6,61 @@ Game nhập vai 2D với hệ thống combat, multiplayer và PK.
 
 ### Security Update (Latest)
 
-Hệ thống đã được cập nhật để ngăn chặn việc client gửi HP/Mana giả:
+Hệ thống đã được cập nhật với bảo mật 2 lớp:
+
+#### 1. Server-Side Validation
 - ✅ HP/Mana được validate và quản lý hoàn toàn ở server-side
 - ✅ Mọi action (heal, attack, take damage) đều được validate từ database
 - ✅ JWT token authentication cho mọi API request
 - ✅ Rate limiting và anti-cheat validation
+- ✅ Request ID system để ngăn duplicate requests
+
+#### 2. Code & Request Obfuscation
+- ✅ Request body được mã hóa (XOR + Base64 + Checksum)
+- ✅ Source code được obfuscate sau khi build production
+- ✅ Tự động deobfuscate ở server-side
+- ✅ Khó reverse engineer và modify requests
 
 **Xem thêm:**
 - [API Security Documentation](./docs/API_SECURITY.md)
+- [Obfuscation Guide](./docs/OBFUSCATION_GUIDE.md)
 - [Migration Guide](./docs/MIGRATION_GUIDE.md)
 
 ## Getting Started
 
-First, run the development server:
+### 1. Cài Đặt Dependencies
+
+```bash
+npm install
+```
+
+### 2. Cấu Hình Environment
+
+Copy `.env.example` thành `.env` và cấu hình:
+
+```bash
+cp .env.example .env
+```
+
+Tạo encryption key:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### 3. Chạy Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+
+### 4. Build Production
+
+```bash
+# Build thông thường (không obfuscate)
+npm run build
+
+# Build với obfuscation (production)
+npm run build:obfuscate
 ```
 
 Open [http://localhost:4004](http://localhost:4004) with your browser to see the result.

@@ -3,6 +3,8 @@
 import React, { useEffect, useCallback } from 'react';
 import { useGameStore } from '@/lib/store';
 import { SKILLS } from '@/lib/skillData';
+import { generateRequestId } from '@/lib/requestId';
+import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
 
 const CombatManager = () => {
     const { 
@@ -72,7 +74,7 @@ const CombatManager = () => {
         };
     }, [isPKMode, playerStats, socket, playerPosition, otherPlayers]);
 
-    const useSkill = useCallback((skillId: string) => {
+    const useSkill = useCallback(async (skillId: string) => {
         console.log('[CombatManager] useSkill called:', skillId);
         
         const skill = SKILLS[skillId];
@@ -85,11 +87,6 @@ const CombatManager = () => {
             console.log('[CombatManager] No socket connection');
             return;
         }
-        
-        if (!isPKMode) {
-            console.log('[CombatManager] Not in PK mode');
-            return;
-        }
 
         // Check cooldown
         const cooldowns = useGameStore.getState().skillCooldowns;
@@ -100,7 +97,7 @@ const CombatManager = () => {
 
         // Check mana
         if (playerStats.mp < skill.manaCost) {
-            setNotification({ message: 'Không đủ mana!', type: 'error' });
+            setNotification({ message: 'Không đủ MP!', type: 'error' });
             return;
         }
 
@@ -111,12 +108,88 @@ const CombatManager = () => {
             return;
         }
 
+        // ===== XỬ LÝ HEAL SKILL (không cần target) =====
+        if (skillId === 'heal') {
+            // Gọi API để heal (server validate và update database)
+            try {
+                const requestId = generateRequestId(user?.id);
+                
+                const response = await sendObfuscatedRequest('/api/player/heal', {
+                    userId: user?.id,
+                    sessionId: user?.sessionId,
+                    token: user?.socketToken,
+                    skillId: skillId,
+                    requestId: requestId  // Unique request ID
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update stats từ server
+                    setPlayerStats({ 
+                        currentHp: data.hp,
+                        mp: data.mp
+                    });
+
+                    // Add cooldown
+                    addSkillCooldown(skillId, skill.cooldown);
+
+                    // Visual effects
+                    addDamageIndicator(playerPosition.x, playerPosition.y, -data.healed);
+                    addActiveEffect({ type: 'heal', endTime: Date.now() + 1000 });
+
+                    console.log('[CombatManager] Healed:', data.healed, 'HP');
+                } else {
+                    setNotification({ message: data.error || 'Hồi phục thất bại', type: 'error' });
+                }
+            } catch (error) {
+                console.error('[CombatManager] Heal API error:', error);
+                setNotification({ message: 'Lỗi kết nối server', type: 'error' });
+            }
+
+            return; // Kết thúc sớm
+        }
+
+        // ===== XỬ LÝ BLOCK SKILL (không cần target) =====
+        if (skillId === 'block') {
+            // Consume mana
+            setPlayerStats({ 
+                mp: Math.max(0, playerStats.mp - skill.manaCost) 
+            });
+
+            // Add cooldown
+            addSkillCooldown(skillId, skill.cooldown);
+
+            // Activate block for 5 seconds - miễn nhiễm hoàn toàn
+            useGameStore.getState().setIsBlocking(true);
+            useGameStore.getState().setBlockEndTime(Date.now() + 5000);
+            
+            setTimeout(() => {
+                useGameStore.getState().setIsBlocking(false);
+                setNotification({ message: '🛡️ Hết hiệu lực phòng thủ!', type: 'info' });
+            }, 5000);
+            
+            setNotification({ message: '🛡️ Miễn nhiễm 5 giây!', type: 'success' });
+            console.log('[CombatManager] Block activated for 5 seconds');
+            return; // Kết thúc sớm
+        }
+
+        // ===== XỬ LÝ SKILL TẤN CÔNG (cần target) =====
         // Find nearest target (PK players or monsters)
         const activeSessions = useGameStore.getState().activePKSessions;
         const monsters = useGameStore.getState().monsters;
         
         console.log('[CombatManager] Active PK sessions:', activeSessions);
         console.log('[CombatManager] Monsters:', Array.from(monsters.keys()));
+        
+        // Check if has any valid target
+        const hasPKTarget = activeSessions.length > 0;
+        const hasMonsterTarget = Array.from(monsters.values()).some(m => !m.isDead);
+        
+        if (!hasPKTarget && !hasMonsterTarget) {
+            setNotification({ message: 'Không có mục tiêu! Bật PK mode hoặc tìm quái gần đó.', type: 'error' });
+            return;
+        }
         
         let targetId = null;
         let targetType: 'player' | 'monster' = 'player';
@@ -158,53 +231,52 @@ const CombatManager = () => {
 
         console.log('[CombatManager] Selected target:', targetId, 'type:', targetType);
 
-        // Self-heal doesn't need target
-        if (skillId === 'heal') {
-            targetId = null;
-        } else if (!targetId && skillId !== 'heal') {
+        // Nếu không có target trong tầm
+        if (!targetId) {
             console.log('[CombatManager] No target in range');
             setNotification({ message: 'Không có mục tiêu trong tầm!', type: 'error' });
             return;
         }
 
-        // Consume mana
-        setPlayerStats({ 
-            mp: Math.max(0, playerStats.mp - skill.manaCost) 
-        });
+        // Gọi API để use skill (server validate MP và update database)
+        try {
+            const response = await sendObfuscatedRequest('/api/player/use-skill', {
+                userId: user?.id,
+                sessionId: user?.sessionId,
+                token: user?.socketToken,
+                skillId: skillId,
+                targetType: targetType
+            });
 
-        // Add cooldown
-        addSkillCooldown(skillId, skill.cooldown);
+            const data = await response.json();
 
-        // Emit skill use với isPK flag
-        const currentPKSessions = useGameStore.getState().activePKSessions;
-        const isPKSkill = targetId && currentPKSessions.includes(targetId);
-        
-        console.log('[CombatManager] Emitting use_skill:', { skillId, targetId, position: playerPosition, isPK: isPKSkill });
-        socket.emit('use_skill', {
-            skillId,
-            targetId,
-            position: playerPosition,
-            isPK: isPKSkill // Flag để server biết đây là PK
-        });
+            if (!data.success) {
+                setNotification({ message: data.error || 'Không thể dùng skill', type: 'error' });
+                return;
+            }
 
-        // Apply self-effects
-        if (skillId === 'heal') {
-            const healAmount = Math.abs(skill.damage);
-            const newHp = Math.min(playerStats.maxHp, playerStats.currentHp + healAmount);
-            setPlayerStats({ currentHp: newHp });
-            addDamageIndicator(playerPosition.x, playerPosition.y, -healAmount);
-            addActiveEffect({ type: 'heal', endTime: Date.now() + 1000 });
-        } else if (skillId === 'block') {
-            // Activate block for 100ms window
-            useGameStore.getState().setIsBlocking(true);
-            useGameStore.getState().setBlockEndTime(Date.now() + 100);
+            // Update MP từ server
+            setPlayerStats({ mp: data.mp });
+
+            // Add cooldown
+            addSkillCooldown(skillId, skill.cooldown);
+
+            // Emit skill use với isPK flag
+            const currentPKSessions = useGameStore.getState().activePKSessions;
+            const isPKSkill = targetId && currentPKSessions.includes(targetId);
             
-            setTimeout(() => {
-                useGameStore.getState().setIsBlocking(false);
-            }, 100);
-            
-            setNotification({ message: '🛡️ Phòng thủ!', type: 'info' });
-            console.log('[CombatManager] Block activated');
+            console.log('[CombatManager] Emitting use_skill:', { skillId, targetId, damage: data.damage, isPK: isPKSkill });
+            socket.emit('use_skill', {
+                skillId,
+                targetId,
+                position: playerPosition,
+                isPK: isPKSkill
+            });
+
+        } catch (error) {
+            console.error('[CombatManager] Use skill API error:', error);
+            setNotification({ message: 'Lỗi kết nối server', type: 'error' });
+            return;
         }
 
         // Calculate and apply damage to target
@@ -389,35 +461,49 @@ const CombatManager = () => {
                 
                 console.log('[Combat] Blocking:', state.isBlocking, 'Damage:', data.damage);
                 
-                let actualDamage = data.damage;
-                
-                // Perfect block (within 100ms window)
+                // Block miễn nhiễm hoàn toàn - không nhận damage
                 if (state.isBlocking) {
-                    actualDamage = 1; // Minimal damage
-                    setNotification({ message: '🛡️ Chặn hoàn hảo!', type: 'success' });
-                    console.log('[Combat] Perfect block!');
+                    setNotification({ message: '🛡️ Miễn nhiễm!', type: 'success' });
+                    addDamageIndicator(playerPosition.x, playerPosition.y, 0);
+                    console.log('[Combat] Blocked! No damage taken.');
+                    return; // Không nhận damage
                 }
                 
-                // We took damage
-                const newHp = Math.max(0, playerStats.currentHp - actualDamage);
-                setPlayerStats({ currentHp: newHp });
-                addDamageIndicator(playerPosition.x, playerPosition.y, actualDamage);
+                // Gọi API để take damage (server validate và update database)
+                (async () => {
+                    try {
+                        const response = await sendObfuscatedRequest('/api/player/take-damage', {
+                            userId: user?.id,
+                            sessionId: user?.sessionId,
+                            token: user?.socketToken,
+                            attackerId: data.attackerId,
+                            skillId: data.skillId
+                        });
 
-                // Broadcast our HP to others
-                emitHPUpdate(newHp, playerStats.maxHp);
+                        const result = await response.json();
 
-                // Apply skill effects
-                const skill = SKILLS[data.skillId];
-                if (skill?.effect && skill.effectDuration && actualDamage > 1) {
-                    addActiveEffect({
-                        type: skill.effect,
-                        endTime: Date.now() + skill.effectDuration,
-                        value: actualDamage
-                    });
-                }
+                        if (result.success) {
+                            // Update HP từ server
+                            setPlayerStats({ currentHp: result.hp });
+                            addDamageIndicator(playerPosition.x, playerPosition.y, result.damage);
 
-                // Check death
-                if (newHp <= 0) {
+                            // Broadcast our HP to others
+                            emitHPUpdate(result.hp, playerStats.maxHp);
+
+                            // Apply skill effects
+                            const skill = SKILLS[data.skillId];
+                            if (skill?.effect && skill.effectDuration && result.damage > 1) {
+                                addActiveEffect({
+                                    type: skill.effect,
+                                    endTime: Date.now() + skill.effectDuration,
+                                    value: result.damage
+                                });
+                            }
+
+                            console.log('[Combat] Took damage:', result.damage, 'HP:', result.hp);
+
+                            // Check death
+                            if (result.isDead) {
                     const activeSessions = useGameStore.getState().activePKSessions;
                     const isPKDeath = activeSessions.includes(data.attackerId);
                     
@@ -461,7 +547,14 @@ const CombatManager = () => {
                         emitHPUpdate(maxHp, maxHp);
                         setNotification({ message: '🏥 Hồi sinh tại Làng Tân Thủ!', type: 'info' });
                     }, 3000);
-                }
+                            }
+                        } else {
+                            console.error('[Combat] Take damage API error:', result.error);
+                        }
+                    } catch (error) {
+                        console.error('[Combat] Take damage API error:', error);
+                    }
+                })();
             } else {
                 // Someone else took damage - show indicator
                 const target = otherPlayers.get(data.playerId);
@@ -585,21 +678,41 @@ const CombatManager = () => {
         };
     }, [socket, playerStats, playerPosition, otherPlayers, setPlayerStats, addDamageIndicator, addActiveEffect, setNotification, updateOtherPlayer]);
 
-    // Mana regeneration
+    // MP regeneration: +30 MP mỗi 10 giây và sync với database
     useEffect(() => {
-        const interval = setInterval(() => {
-            const mp = useGameStore.getState().playerStats.mp;
-            const maxMp = useGameStore.getState().playerStats.maxMp;
+        if (!user) return;
+
+        const interval = setInterval(async () => {
+            const state = useGameStore.getState();
+            const mp = state.playerStats.mp;
+            const maxMp = state.playerStats.maxMp;
             
             if (mp < maxMp) {
-                setPlayerStats({ 
-                    mp: Math.min(maxMp, mp + 2) 
-                });
+                const newMp = Math.min(maxMp, mp + 30);
+                
+                // Update local state ngay
+                setPlayerStats({ mp: newMp });
+                
+                // Sync với database (batch update mỗi 10s)
+                try {
+                    const response = await sendObfuscatedRequest('/api/player/regen-mp', {
+                        userId: user.id,
+                        sessionId: user.sessionId,
+                        token: user.socketToken,
+                        mp: newMp
+                    });
+
+                    if (response.ok) {
+                        console.log('[MP Regen] Synced with database:', newMp);
+                    }
+                } catch (error) {
+                    console.error('[MP Regen] Failed to sync:', error);
+                }
             }
-        }, 1000);
+        }, 10000); // 10 giây
 
         return () => clearInterval(interval);
-    }, [setPlayerStats]);
+    }, [user, setPlayerStats]);
 
     return null; // This is a logic-only component
 };

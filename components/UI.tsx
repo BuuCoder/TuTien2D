@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGameStore } from '@/lib/store';
 import { MAPS } from '@/lib/gameData';
+import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
 
 const Instructions = () => {
     const [isMobile, setIsMobile] = useState(false);
@@ -31,14 +32,10 @@ const Instructions = () => {
 
         try {
             // Call logout API
-            const response = await fetch('/api/auth/logout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.id,
-                    sessionId: user.sessionId,
-                    token: user.socketToken
-                })
+            const response = await sendObfuscatedRequest('/api/auth/logout', {
+                userId: user.id,
+                sessionId: user.sessionId,
+                token: user.socketToken
             });
 
             const data = await response.json();
@@ -144,9 +141,10 @@ const Instructions = () => {
                         </div>
                         <div style={{ 
                             fontSize: '11px', 
-                            color: '#aaa',
+                            color: '#FFD700',
+                            fontWeight: 'bold'
                         }}>
-                            Level {user.level || 1}
+                            💰 {user.gold || 0} vàng
                         </div>
                     </div>
                     <button

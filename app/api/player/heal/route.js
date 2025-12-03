@@ -1,10 +1,12 @@
 import db from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt.mjs';
+import { checkRequestId } from '@/lib/requestIdMiddleware';
+import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 
 export async function POST(req) {
     try {
-        const { userId, sessionId, token, skillId } = await req.json();
+        const { userId, sessionId, token, skillId, requestId } = await parseRequestBody(req);
 
         console.log('[Heal] Request:', { userId, sessionId, skillId });
 
@@ -29,6 +31,23 @@ export async function POST(req) {
             return NextResponse.json(
                 { error: 'Thông tin xác thực không khớp' },
                 { status: 401 }
+            );
+        }
+
+        // Check request ID để tránh duplicate
+        const requestCheck = await checkRequestId(requestId, userId, 'heal');
+        if (!requestCheck.valid) {
+            if (requestCheck.isDuplicate) {
+                // Duplicate request - trả về success nhưng không xử lý
+                return NextResponse.json({
+                    success: true,
+                    message: 'Request đã được xử lý trước đó',
+                    isDuplicate: true
+                });
+            }
+            return NextResponse.json(
+                { error: requestCheck.error },
+                { status: 400 }
             );
         }
 

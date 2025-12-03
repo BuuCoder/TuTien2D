@@ -63,7 +63,7 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
                         npcId: id,
                         action: 'greet',
                         timestamp: new Date().toISOString(),
-                    }),
+                    })
                 })
                 .then(res => res.json())
                 .then(data => {
@@ -122,7 +122,7 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
                                 npcId: id,
                                 action: 'talk',
                                 timestamp: new Date().toISOString(),
-                            }),
+                            })
                         });
 
                         const data = await response.json();

@@ -1,9 +1,10 @@
 import db from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 
 export async function POST(req) {
     try {
-        const { userId1, userId2 } = await req.json();
+        const { userId1, userId2 } = await parseRequestBody(req);
 
         if (!userId1 || !userId2) {
             return NextResponse.json(

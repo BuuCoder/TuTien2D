@@ -4,57 +4,109 @@ import React, { useState } from 'react';
 import { useGameStore } from '@/lib/store';
 
 const MenuPopup = () => {
-    const { activeMenu, setActiveMenu, setNotification } = useGameStore();
+    const { activeMenu, setActiveMenu, setNotification, user, setPlayerStats, playerStats } = useGameStore();
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
     if (!activeMenu) return null;
 
     const handleBuyItem = async (item: any) => {
         try {
-            // Determine action type based on category
-            const actionType = selectedCategory === 'potions' ? 'BUY_POTION' :
-                selectedCategory === 'quests' ? 'ACCEPT_QUEST' :
-                    'BUY_ITEM';
-
-            const requestBody: any = {
-                actionType,
-                itemId: item.id,
-                itemName: item.name,
-            };
-
-            // Add appropriate fields based on action type
-            if (actionType === 'ACCEPT_QUEST') {
-                requestBody.questId = item.id;
-                requestBody.questName = item.name;
-            } else {
-                requestBody.price = item.price;
-                requestBody.category = selectedCategory;
-            }
-
-            const response = await fetch('/api/game-action', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
-            });
-
-            const data = await response.json();
-
-            if (response.status === 429) {
-                // Rate limit error
-                setNotification({
-                    message: 'Vui lòng đợi request trước hoàn thành!',
-                    type: 'error'
-                });
+            if (!user) {
+                setNotification({ message: 'Bạn chưa đăng nhập!', type: 'error' });
                 return;
             }
 
-            if (data.success) {
-                setNotification({ message: data.message, type: 'success' });
-            } else {
-                setNotification({
-                    message: data.error || 'Thao tác thất bại!',
-                    type: 'error'
+            // Kiểm tra nếu là dịch vụ healing
+            const isHealingService = item.id === 'heal-hp' || item.id === 'heal-mp' || item.id === 'heal-all';
+
+            if (isHealingService) {
+                // Gọi API buy-item cho dịch vụ healing
+                const response = await fetch('/api/buy-item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        itemId: item.id,
+                        itemName: item.name,
+                        price: item.price,
+                        userId: user.id,
+                        sessionId: user.sessionId,
+                        token: user.socketToken,
+                        npcId: activeMenu.npcId
+                    }),
                 });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Cập nhật HP/MP từ response
+                    if (data.hp !== undefined && data.mp !== undefined) {
+                        setPlayerStats({
+                            currentHp: data.hp,
+                            maxHp: data.maxHp,
+                            mp: data.mp,
+                            maxMp: data.maxMp
+                        });
+                    }
+
+                    // Cập nhật gold
+                    if (data.gold !== undefined) {
+                        useGameStore.setState({ 
+                            user: { ...user, gold: data.gold } 
+                        });
+                    }
+
+                    setNotification({ message: data.message, type: 'success' });
+                } else {
+                    setNotification({
+                        message: data.error || 'Không thể mua dịch vụ!',
+                        type: 'error'
+                    });
+                }
+            } else {
+                // Mua item thông thường (quest, potion, etc.)
+                const actionType = selectedCategory === 'quests' ? 'ACCEPT_QUEST' : 'BUY_ITEM';
+
+                const requestBody: any = {
+                    actionType,
+                    itemId: item.id,
+                    itemName: item.name,
+                    userId: user.id,
+                    sessionId: user.sessionId,
+                    token: user.socketToken
+                };
+
+                if (actionType === 'ACCEPT_QUEST') {
+                    requestBody.questId = item.id;
+                    requestBody.questName = item.name;
+                } else {
+                    requestBody.price = item.price;
+                    requestBody.category = selectedCategory;
+                }
+
+                const response = await fetch('/api/game-action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody),
+                });
+
+                const data = await response.json();
+
+                if (response.status === 429) {
+                    setNotification({
+                        message: 'Vui lòng đợi request trước hoàn thành!',
+                        type: 'error'
+                    });
+                    return;
+                }
+
+                if (data.success) {
+                    setNotification({ message: data.message, type: 'success' });
+                } else {
+                    setNotification({
+                        message: data.error || 'Thao tác thất bại!',
+                        type: 'error'
+                    });
+                }
             }
         } catch (error) {
             console.error('Action failed', error);

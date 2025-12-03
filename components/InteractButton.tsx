@@ -20,7 +20,7 @@ const InteractButton = () => {
                     npcId: npcId,
                     action: 'talk',
                     timestamp: new Date().toISOString(),
-                }),
+                })
             });
 
             const data = await response.json();

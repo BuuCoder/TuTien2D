@@ -1,6 +1,7 @@
 import db from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt.mjs';
+import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 
 /**
  * API để cập nhật Max HP và Max MP
@@ -13,7 +14,7 @@ import { verifyToken } from '@/lib/jwt.mjs';
  */
 export async function POST(req) {
     try {
-        const { userId, sessionId, token, maxHp, maxMp, reason } = await req.json();
+        const { userId, sessionId, token, maxHp, maxMp, reason } = await parseRequestBody(req);
 
         console.log('[UpdateMaxStats] Request:', { userId, sessionId, maxHp, maxMp, reason });
 

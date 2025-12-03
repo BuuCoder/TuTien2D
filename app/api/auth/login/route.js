@@ -2,10 +2,11 @@ import db from '@/lib/db';
 import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { generateToken } from '@/lib/jwt.mjs';
+import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 
 export async function POST(req) {
     try {
-        const { username, password } = await req.json();
+        const { username, password } = await parseRequestBody(req);
 
         if (!username || !password) {
             return NextResponse.json(

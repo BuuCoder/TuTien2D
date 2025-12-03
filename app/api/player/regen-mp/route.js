@@ -3,11 +3,13 @@ import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt.mjs';
 import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 
+/**
+ * API để sync MP regeneration với database
+ * Được gọi mỗi 10 giây khi MP đang regenerate
+ */
 export async function POST(req) {
     try {
-        const { userId, sessionId, token } = await parseRequestBody(req);
-
-        console.log('[GetStats] Request:', { userId, sessionId });
+        const { userId, sessionId, token, mp } = await parseRequestBody(req);
 
         if (!token) {
             return NextResponse.json(
@@ -33,9 +35,9 @@ export async function POST(req) {
             );
         }
 
-        // Lấy stats từ database
+        // Lấy max_mp từ database để validate
         const [stats] = await db.query(
-            'SELECT hp, max_hp, mp, max_mp, level, experience FROM user_stats WHERE user_id = ?',
+            'SELECT max_mp FROM user_stats WHERE user_id = ?',
             [userId]
         );
 
@@ -46,15 +48,32 @@ export async function POST(req) {
             );
         }
 
-        console.log('[GetStats] Success:', { userId, stats: stats[0] });
+        const maxMp = stats[0].max_mp;
+
+        // Validate MP không vượt quá max
+        if (mp > maxMp) {
+            return NextResponse.json(
+                { error: 'MP không thể vượt quá max MP' },
+                { status: 400 }
+            );
+        }
+
+        // Update MP trong database
+        await db.query(
+            'UPDATE user_stats SET mp = ? WHERE user_id = ?',
+            [mp, userId]
+        );
+
+        console.log('[RegenMP] MP regenerated and synced:', { userId, mp, maxMp });
 
         return NextResponse.json({
             success: true,
-            stats: stats[0]
+            mp: mp,
+            maxMp: maxMp
         });
 
     } catch (error) {
-        console.error('Get stats error:', error);
+        console.error('Regen MP error:', error);
         return NextResponse.json(
             { error: 'Lỗi server: ' + error.message },
             { status: 500 }

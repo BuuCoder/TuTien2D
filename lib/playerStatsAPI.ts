@@ -5,6 +5,8 @@
  * Tất cả các thao tác đều được validate ở server-side.
  */
 
+import { sendObfuscatedRequest } from './requestObfuscator';
+
 interface PlayerAuth {
   userId: number;
   sessionId: string;
@@ -52,12 +54,7 @@ interface GetStatsResponse {
  */
 export async function getPlayerStats(auth: PlayerAuth): Promise<GetStatsResponse> {
   try {
-    const response = await fetch('/api/player/get-stats', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(auth)
-    });
-
+    const response = await sendObfuscatedRequest('/api/player/get-stats', auth);
     return await response.json();
   } catch (error) {
     console.error('[PlayerStatsAPI] Get stats error:', error);
@@ -77,13 +74,9 @@ export async function healPlayer(
   skillId: string
 ): Promise<HealResponse> {
   try {
-    const response = await fetch('/api/player/heal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...auth,
-        skillId
-      })
+    const response = await sendObfuscatedRequest('/api/player/heal', {
+      ...auth,
+      skillId
     });
 
     const data = await response.json();
@@ -113,14 +106,10 @@ export async function useSkill(
   targetType: 'player' | 'monster' = 'monster'
 ): Promise<UseSkillResponse> {
   try {
-    const response = await fetch('/api/player/use-skill', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...auth,
-        skillId,
-        targetType
-      })
+    const response = await sendObfuscatedRequest('/api/player/use-skill', {
+      ...auth,
+      skillId,
+      targetType
     });
 
     const data = await response.json();
@@ -152,15 +141,11 @@ export async function takeDamage(
   attackerToken?: string
 ): Promise<TakeDamageResponse> {
   try {
-    const response = await fetch('/api/player/take-damage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...auth,
-        attackerId,
-        skillId,
-        attackerToken
-      })
+    const response = await sendObfuscatedRequest('/api/player/take-damage', {
+      ...auth,
+      attackerId,
+      skillId,
+      attackerToken
     });
 
     const data = await response.json();
@@ -186,14 +171,10 @@ export async function updateInventory(
   items?: any[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const response = await fetch('/api/player/update-stats', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...auth,
-        gold,
-        items
-      })
+    const response = await sendObfuscatedRequest('/api/player/update-stats', {
+      ...auth,
+      gold,
+      items
     });
 
     return await response.json();
@@ -223,15 +204,11 @@ export async function updateMaxStats(
   reason?: 'level_up' | 'equipment' | 'buff' | 'skill' | 'admin'
 ): Promise<GetStatsResponse> {
   try {
-    const response = await fetch('/api/player/update-max-stats', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...auth,
-        maxHp,
-        maxMp,
-        reason: reason || 'admin'
-      })
+    const response = await sendObfuscatedRequest('/api/player/update-max-stats', {
+      ...auth,
+      maxHp,
+      maxMp,
+      reason: reason || 'admin'
     });
 
     const data = await response.json();
@@ -303,11 +280,7 @@ export function getSkillInfo(skillId: string, skillType: 'heal' | 'attack') {
  */
 export async function logout(auth: PlayerAuth): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const response = await fetch('/api/auth/logout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(auth)
-    });
+    const response = await sendObfuscatedRequest('/api/auth/logout', auth);
 
     const data = await response.json();
     

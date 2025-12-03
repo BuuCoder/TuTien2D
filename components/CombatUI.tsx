@@ -47,16 +47,20 @@ const CombatUI = () => {
         // Check mana
         if (playerStats.mp < skill.manaCost) {
             useGameStore.getState().setNotification({
-                message: 'Không đủ mana!',
+                message: 'Không đủ MP!',
                 type: 'error'
             });
             return;
         }
 
-        // Check if in PK mode
-        if (!isPKMode) {
+        // Skill hồi phục và block không cần PK mode
+        const isHealSkill = skillId === 'heal';
+        const isBlockSkill = skillId === 'block';
+
+        // Check if in PK mode (chỉ cho skill tấn công)
+        if (!isPKMode && !isHealSkill && !isBlockSkill) {
             useGameStore.getState().setNotification({
-                message: 'Bật PK Mode để sử dụng skill!',
+                message: 'Bật PK Mode hoặc tìm quái để sử dụng skill tấn công!',
                 type: 'error'
             });
             return;

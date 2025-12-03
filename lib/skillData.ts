@@ -111,13 +111,13 @@ export const SKILLS: Record<string, Skill> = {
     // Defense Skill
     'block': {
         id: 'block',
-        name: 'Phòng Thủ',
-        description: 'Chặn đòn tấn công (0.1s window)',
+        name: 'Miễn Nhiễm',
+        description: 'Miễn nhiễm mọi tấn công trong 5 giây',
         manaCost: 10,
         damage: 0,
-        cooldown: 3000,
+        cooldown: 10000, // 10s cooldown
         range: 0,
-        castTime: 100,
+        castTime: 0,
         icon: '🛡️',
     },
 };
