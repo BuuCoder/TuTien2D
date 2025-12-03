@@ -67,7 +67,7 @@ const Joystick = () => {
 
     useEffect(() => {
         const joystick = joystickRef.current;
-        if (!joystick) return;
+        if (!joystick || !isMobile) return;
 
         const handleTouchStart = (e: TouchEvent) => {
             e.preventDefault();
@@ -119,7 +119,7 @@ const Joystick = () => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging]);
+    }, [isDragging, isMobile]);
 
     // Ẩn joystick trên desktop
     if (!isMobile) return null;
