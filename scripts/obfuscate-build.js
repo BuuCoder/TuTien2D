@@ -46,7 +46,7 @@ function obfuscateFile(filePath) {
         // Skip if already obfuscated
         if (code.includes('_0x')) {
             console.log(`[Obfuscate] Skipping (already obfuscated): ${path.basename(filePath)}`);
-            return;
+            return false;
         }
         
         console.log(`[Obfuscate] Processing: ${path.basename(filePath)}`);
@@ -56,9 +56,12 @@ function obfuscateFile(filePath) {
         fs.writeFileSync(filePath, obfuscated.getObfuscatedCode(), 'utf8');
         
         console.log(`[Obfuscate] ✓ Done: ${path.basename(filePath)}`);
+        return true;
         
     } catch (error) {
-        console.error(`[Obfuscate] ✗ Error: ${path.basename(filePath)}`, error.message);
+        console.error(`[Obfuscate] ✗ Error: ${path.basename(filePath)} - ${error.message.split('\n')[0]}`);
+        console.log(`[Obfuscate] ⚠ Skipping file due to error`);
+        return false;
     }
 }
 
@@ -77,10 +80,11 @@ function obfuscateDirectory(dir) {
 
         if (stat.isDirectory()) {
             // Recursive
-            obfuscateDirectory(filePath);
+            processed += obfuscateDirectory(filePath);
         } else if (file.endsWith('.js') && !file.includes('.map')) {
-            obfuscateFile(filePath);
-            processed++;
+            if (obfuscateFile(filePath)) {
+                processed++;
+            }
         }
     });
 
