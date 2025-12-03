@@ -17,7 +17,7 @@ const PlayerChatBubbles = () => {
     useEffect(() => {
         // Only show bubble for NEW messages (not history)
         if (chatMessages.length === 0) return;
-        
+
         // Skip if this is initial load (history load)
         if (lastMessageCount === 0 && chatMessages.length > 1) {
             setLastMessageCount(chatMessages.length);
@@ -28,7 +28,7 @@ const PlayerChatBubbles = () => {
         if (chatMessages.length <= lastMessageCount) return;
 
         const latestMessage = chatMessages[chatMessages.length - 1];
-        
+
         // Check if message is recent (within last 5 seconds)
         const messageAge = Date.now() - latestMessage.timestamp;
         if (messageAge > 5000) {
@@ -65,7 +65,7 @@ const PlayerChatBubbles = () => {
                     left: playerPosition.x,
                     top: playerPosition.y - 80,
                     transform: 'translateX(-50%)',
-                    zIndex: 1002
+                    zIndex: 10000
                 }}>
                     <div style={{
                         backgroundColor: 'rgba(0, 0, 0, 0.85)',
@@ -108,7 +108,7 @@ const PlayerChatBubbles = () => {
                             left: player.x,
                             top: player.y - 80,
                             transform: 'translateX(-50%)',
-                            zIndex: 1002
+                            zIndex: 10000
                         }}
                     >
                         <div style={{

@@ -71,6 +71,16 @@
     will-change: scroll-position;
     /* Ensure smooth scrolling */
     scroll-behavior: smooth;
+    /* Hide scrollbar on desktop */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.messages::-webkit-scrollbar {
+    display: none;
 }
 
 .messageItem {
