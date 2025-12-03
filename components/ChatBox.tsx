@@ -122,6 +122,13 @@ const ChatBox = () => {
         }
     }, [chatMessages, isOpen, user]);
 
+    // Clear unread count when changing map/channel
+    useEffect(() => {
+        setUnreadCount(0);
+        lastSeenCountRef.current = chatMessages.length;
+        hasInitializedRef.current = false; // Reset để không count history là unread
+    }, [currentMapId, currentChannel]);
+
     // Reset unread when opening chat
     const handleOpenChat = () => {
         setIsOpen(true);

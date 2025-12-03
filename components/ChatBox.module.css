@@ -52,10 +52,15 @@
 .messages {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    /* Fix scroll on mobile */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 .messageItem {
