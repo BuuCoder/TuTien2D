@@ -112,9 +112,32 @@
 
     // iOS specific: prevent bounce scroll
     document.addEventListener('touchmove', function(e) {
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-            e.preventDefault();
+        const target = e.target;
+        
+        // Allow inputs and textareas
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+            return;
         }
+        
+        // Check if target or any parent is marked as scrollable
+        let element = target;
+        let foundScrollable = false;
+        
+        while (element && element !== document.body) {
+            if (element.dataset && element.dataset.scrollable === 'true') {
+                foundScrollable = true;
+                console.log('Found scrollable element:', element.className);
+                break;
+            }
+            element = element.parentElement;
+        }
+        
+        if (foundScrollable) {
+            return; // Allow scrolling
+        }
+        
+        // Prevent default for everything else
+        e.preventDefault();
     }, { passive: false });
 
     // Set initial viewport
