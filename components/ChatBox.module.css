@@ -11,9 +11,6 @@
     z-index: 9999;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    /* Allow touch events */
-    touch-action: auto;
-    pointer-events: auto;
 }
 
 .toggleButton {
@@ -53,38 +50,17 @@
 }
 
 .messages {
-    height: 100%;
-    overflow-y: scroll;
+    flex: 1;
+    overflow-y: auto;
     overflow-x: hidden;
     padding: 12px;
-    padding-right: 50px; /* Space for scroll buttons */
     display: flex;
     flex-direction: column;
     gap: 8px;
     /* Fix scroll on mobile */
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    /* Allow vertical scrolling only */
-    touch-action: pan-y pinch-zoom;
-}
-
-/* Custom scrollbar for better mobile experience */
-.messages::-webkit-scrollbar {
-    width: 6px;
-}
-
-.messages::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 3px;
-}
-
-.messages::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-}
-
-.messages::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 .messageItem {
@@ -168,12 +144,5 @@
         bottom: 80px;
         /* Avoid overlapping with bottom navigation if any */
         left: 10px;
-    }
-
-    .messages {
-        /* Ensure touch scrolling works on mobile */
-        overflow-y: scroll;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-y: contain;
     }
 }

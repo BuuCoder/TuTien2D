@@ -92,24 +92,6 @@ const ChatBox = () => {
         }
     };
 
-    const scrollUp = () => {
-        if (messagesContainerRef.current) {
-            messagesContainerRef.current.scrollBy({
-                top: -150,
-                behavior: 'smooth'
-            });
-        }
-    };
-
-    const scrollDown = () => {
-        if (messagesContainerRef.current) {
-            messagesContainerRef.current.scrollBy({
-                top: 150,
-                behavior: 'smooth'
-            });
-        }
-    };
-
     // Track unread messages - persist across open/close
     const [unreadCount, setUnreadCount] = useState(0);
     const lastSeenCountRef = useRef(0);
@@ -207,7 +189,7 @@ const ChatBox = () => {
     }
 
     return (
-        <div className={styles.chatContainer} data-scrollable="true">
+        <div className={styles.chatContainer}>
             {/* Header */}
             <div className={styles.header}>
                 <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
@@ -228,111 +210,39 @@ const ChatBox = () => {
                 </button>
             </div>
 
-            {/* Messages with scroll buttons */}
-            <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
-                <div ref={messagesContainerRef} className={styles.messages} data-scrollable="true">
-                    {chatMessages.map((msg, idx) => (
-                        <div
-                            key={idx}
-                            className={styles.messageItem}
-                            style={{
-                                backgroundColor: msg.userId === user?.id
-                                    ? 'rgba(102, 126, 234, 0.3)'
-                                    : 'rgba(255, 255, 255, 0.05)',
-                                borderLeft: msg.userId === user?.id
-                                    ? '3px solid #667eea'
-                                    : '3px solid #555'
-                            }}
-                        >
-                            <div style={{
-                                fontSize: '11px',
-                                color: '#aaa',
-                                marginBottom: '4px',
-                                fontWeight: 'bold'
-                            }}>
-                                {msg.username}
-                            </div>
-                            <div style={{
-                                fontSize: '13px',
-                                color: 'white',
-                                wordWrap: 'break-word'
-                            }}>
-                                {msg.message}
-                            </div>
+            {/* Messages */}
+            <div ref={messagesContainerRef} className={styles.messages}>
+                {chatMessages.map((msg, idx) => (
+                    <div
+                        key={idx}
+                        className={styles.messageItem}
+                        style={{
+                            backgroundColor: msg.userId === user?.id
+                                ? 'rgba(102, 126, 234, 0.3)'
+                                : 'rgba(255, 255, 255, 0.05)',
+                            borderLeft: msg.userId === user?.id
+                                ? '3px solid #667eea'
+                                : '3px solid #555'
+                        }}
+                    >
+                        <div style={{
+                            fontSize: '11px',
+                            color: '#aaa',
+                            marginBottom: '4px',
+                            fontWeight: 'bold'
+                        }}>
+                            {msg.username}
                         </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                </div>
-
-                {/* Scroll buttons */}
-                <div style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                    zIndex: 10,
-                    pointerEvents: 'auto',
-                }}>
-                    <button
-                        onClick={scrollUp}
-                        style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            backgroundColor: 'rgba(102, 126, 234, 0.8)',
-                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                        <div style={{
+                            fontSize: '13px',
                             color: 'white',
-                            fontSize: '16px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(102, 126, 234, 1)';
-                            e.currentTarget.style.transform = 'scale(1.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(102, 126, 234, 0.8)';
-                            e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                    >
-                        ▲
-                    </button>
-                    <button
-                        onClick={scrollDown}
-                        style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            backgroundColor: 'rgba(102, 126, 234, 0.8)',
-                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                            color: 'white',
-                            fontSize: '16px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(102, 126, 234, 1)';
-                            e.currentTarget.style.transform = 'scale(1.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(102, 126, 234, 0.8)';
-                            e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                    >
-                        ▼
-                    </button>
-                </div>
+                            wordWrap: 'break-word'
+                        }}>
+                            {msg.message}
+                        </div>
+                    </div>
+                ))}
+                <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
