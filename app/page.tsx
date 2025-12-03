@@ -8,6 +8,7 @@ import TargetIndicator from '@/components/TargetIndicator';
 import LoginPage from '@/components/LoginPage';
 import MultiplayerManager from '@/components/MultiplayerManager';
 import GameContent from '@/components/GameContent';
+import PinchZoom from '@/components/PinchZoom';
 
 export default function Home() {
   return (
@@ -24,7 +25,9 @@ export default function Home() {
       left: 0,
       overflow: 'hidden'
     }}>
-      <GameContent />
+      <PinchZoom minZoom={0.9} maxZoom={1.1}>
+        <GameContent />
+      </PinchZoom>
     </main>
   );
 }

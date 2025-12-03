@@ -189,7 +189,12 @@ const ChatBox = () => {
     }
 
     return (
-        <div className={styles.chatContainer}>
+        <div 
+            className={styles.chatContainer}
+            style={{
+                touchAction: 'none', // Prevent default touch on container
+            }}
+        >
             {/* Header */}
             <div className={styles.header}>
                 <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
@@ -211,7 +216,15 @@ const ChatBox = () => {
             </div>
 
             {/* Messages */}
-            <div ref={messagesContainerRef} className={styles.messages}>
+            <div 
+                ref={messagesContainerRef} 
+                className={styles.messages}
+                style={{
+                    WebkitOverflowScrolling: 'touch',
+                    overscrollBehavior: 'contain',
+                    touchAction: 'pan-y',
+                }}
+            >
                 {chatMessages.map((msg, idx) => (
                     <div
                         key={idx}
