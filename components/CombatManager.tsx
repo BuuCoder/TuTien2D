@@ -61,7 +61,6 @@ const CombatManager = () => {
 
         const handleUseSkillEvent = (e: any) => {
             const { skillId } = e.detail;
-            console.log('[CombatManager] Received useSkill event:', skillId);
             useSkill(skillId);
         };
 
@@ -75,16 +74,13 @@ const CombatManager = () => {
     }, [isPKMode, playerStats, socket, playerPosition, otherPlayers]);
 
     const useSkill = useCallback(async (skillId: string) => {
-        console.log('[CombatManager] useSkill called:', skillId);
         
         const skill = SKILLS[skillId];
         if (!skill) {
-            console.log('[CombatManager] Skill not found');
             return;
         }
         
         if (!socket) {
-            console.log('[CombatManager] No socket connection');
             return;
         }
 
@@ -138,7 +134,6 @@ const CombatManager = () => {
                     addDamageIndicator(playerPosition.x, playerPosition.y, -data.healed);
                     addActiveEffect({ type: 'heal', endTime: Date.now() + 1000 });
 
-                    console.log('[CombatManager] Healed:', data.healed, 'HP');
                 } else {
                     setNotification({ message: data.error || 'Hồi phục thất bại', type: 'error' });
                 }
@@ -170,7 +165,6 @@ const CombatManager = () => {
             }, 5000);
             
             setNotification({ message: '🛡️ Miễn nhiễm 5 giây!', type: 'success' });
-            console.log('[CombatManager] Block activated for 5 seconds');
             return; // Kết thúc sớm
         }
 
@@ -179,8 +173,6 @@ const CombatManager = () => {
         const activeSessions = useGameStore.getState().activePKSessions;
         const monsters = useGameStore.getState().monsters;
         
-        console.log('[CombatManager] Active PK sessions:', activeSessions);
-        console.log('[CombatManager] Monsters:', Array.from(monsters.keys()));
         
         // Check if has any valid target
         const hasPKTarget = activeSessions.length > 0;
@@ -229,11 +221,9 @@ const CombatManager = () => {
             });
         }
 
-        console.log('[CombatManager] Selected target:', targetId, 'type:', targetType);
 
         // Nếu không có target trong tầm
         if (!targetId) {
-            console.log('[CombatManager] No target in range');
             setNotification({ message: 'Không có mục tiêu trong tầm!', type: 'error' });
             return;
         }
@@ -265,7 +255,6 @@ const CombatManager = () => {
             const currentPKSessions = useGameStore.getState().activePKSessions;
             const isPKSkill = targetId && currentPKSessions.includes(targetId);
             
-            console.log('[CombatManager] Emitting use_skill:', { skillId, targetId, damage: data.damage, isPK: isPKSkill });
             socket.emit('use_skill', {
                 skillId,
                 targetId,
@@ -283,7 +272,6 @@ const CombatManager = () => {
         if (targetId) {
             const finalDamage = skill.damage;
             
-            console.log('[CombatManager] Dealing damage:', finalDamage, 'to', targetId, 'type:', targetType);
             
             if (targetType === 'player') {
                 // Damage to player với isPK flag
@@ -307,7 +295,6 @@ const CombatManager = () => {
             }
         }
 
-        console.log(`[Combat] Used skill ${skillId} on ${targetId || 'self'}`);
     }, [socket, isPKMode, playerStats, playerPosition, otherPlayers, setPlayerStats, addSkillCooldown, addDamageIndicator, setNotification, addActiveEffect]);
 
     // Broadcast initial HP when joining
@@ -316,7 +303,6 @@ const CombatManager = () => {
 
         const timer = setTimeout(() => {
             emitHPUpdate(playerStats.currentHp, playerStats.maxHp);
-            console.log('[Combat] Broadcasted initial HP');
         }, 1000);
 
         return () => clearTimeout(timer);
@@ -331,12 +317,10 @@ const CombatManager = () => {
 
         // If in active PK session and map changed, forfeit
         if (activeSessions.length > 0) {
-            console.log('[Combat] In PK session, checking map change');
             
             const checkMapChange = () => {
                 const newMapId = useGameStore.getState().currentMapId;
                 if (newMapId !== currentMapId) {
-                    console.log('[Combat] Map changed during PK! Forfeiting...');
                     
                     // Notify all PK opponents
                     activeSessions.forEach(opponentId => {
@@ -378,12 +362,10 @@ const CombatManager = () => {
         if (!socket) return;
 
         socket.on('pk_request', (data: any) => {
-            console.log('[PK] Received PK request:', data);
             useGameStore.getState().addPKRequest(data);
         });
 
         socket.on('pk_request_response', (data: any) => {
-            console.log('[PK] PK request response:', data);
             
             if (data.accepted) {
                 const state = useGameStore.getState();
@@ -432,7 +414,6 @@ const CombatManager = () => {
 
         // Skill used by someone
         socket.on('skill_used', (data: any) => {
-            console.log('[Combat] Skill used:', data);
             
             // Show skill animation (you can add visual effects here)
             if (data.casterId !== socket.id) {
@@ -440,32 +421,23 @@ const CombatManager = () => {
                 const skill = SKILLS[data.skillId];
                 if (skill) {
                     // Add visual effect at position
-                    console.log(`${data.casterUsername} used ${skill.name}`);
                 }
             }
         });
 
         // Player took damage
         socket.on('player_damaged', (data: any) => {
-            console.log('[Combat] ===== PLAYER DAMAGED EVENT =====');
-            console.log('[Combat] Event data:', data);
-            console.log('[Combat] My socket ID:', socket.id);
-            console.log('[Combat] Am I the target?', data.playerId === socket.id);
-            console.log('[Combat] Am I the attacker?', data.attackerId === socket.id);
             
             // Only process if we are the target
             if (data.playerId === socket.id) {
-                console.log('[Combat] ✓ I am the target, processing damage');
                 // Check if we're blocking
                 const state = useGameStore.getState();
                 
-                console.log('[Combat] Blocking:', state.isBlocking, 'Damage:', data.damage);
                 
                 // Block miễn nhiễm hoàn toàn - không nhận damage
                 if (state.isBlocking) {
                     setNotification({ message: '🛡️ Miễn nhiễm!', type: 'success' });
                     addDamageIndicator(playerPosition.x, playerPosition.y, 0);
-                    console.log('[Combat] Blocked! No damage taken.');
                     return; // Không nhận damage
                 }
                 
@@ -500,7 +472,6 @@ const CombatManager = () => {
                                 });
                             }
 
-                            console.log('[Combat] Took damage:', result.damage, 'HP:', result.hp);
 
                             // Check death
                             if (result.isDead) {
@@ -566,7 +537,6 @@ const CombatManager = () => {
 
         // Player died
         socket.on('player_died', (data: any) => {
-            console.log('[Combat] Player died:', data);
             
             if (data.killerId === socket.id) {
                 // End PK session
@@ -597,7 +567,6 @@ const CombatManager = () => {
 
         // PK Forfeit (opponent left map)
         socket.on('pk_forfeit', (data: any) => {
-            console.log('[Combat] Opponent forfeited:', data);
             
             // End PK session
             const state = useGameStore.getState();
@@ -626,7 +595,6 @@ const CombatManager = () => {
 
         // PK Ended
         socket.on('pk_ended', (data: any) => {
-            console.log('[Combat] PK ended:', data);
             
             const state = useGameStore.getState();
             if (state.activePKSessions.includes(data.opponentId)) {
@@ -661,7 +629,6 @@ const CombatManager = () => {
 
         // HP update from other players
         socket.on('player_hp_updated', (data: any) => {
-            console.log('[Combat] Player HP updated:', data);
             updateOtherPlayer(data.playerId, {
                 hp: data.hp,
                 maxHp: data.maxHp
@@ -703,7 +670,6 @@ const CombatManager = () => {
                     });
 
                     if (response.ok) {
-                        console.log('[MP Regen] Synced with database:', newMp);
                     }
                 } catch (error) {
                     console.error('[MP Regen] Failed to sync:', error);

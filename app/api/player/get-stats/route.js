@@ -46,11 +46,18 @@ export async function POST(req) {
             );
         }
 
-        console.log('[GetStats] Success:', { userId, stats: stats[0] });
+        // Lấy gold từ user_inventory
+        const [inventory] = await db.query(
+            'SELECT gold FROM user_inventory WHERE user_id = ?',
+            [userId]
+        );
+
+        console.log('[GetStats] Success:', { userId, stats: stats[0], gold: inventory[0]?.gold });
 
         return NextResponse.json({
             success: true,
-            stats: stats[0]
+            stats: stats[0],
+            gold: inventory[0]?.gold || 0
         });
 
     } catch (error) {

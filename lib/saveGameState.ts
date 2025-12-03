@@ -8,11 +8,6 @@ export const saveGameState = () => {
   // Lưu map và vị trí hiện tại
   localStorage.setItem('tutien2d_currentMap', state.currentMapId);
   localStorage.setItem('tutien2d_playerPosition', JSON.stringify(state.playerPosition));
-  
-  console.log('Game state saved:', {
-    map: state.currentMapId,
-    position: state.playerPosition
-  });
 };
 
 // Lưu khi người dùng thoát trang

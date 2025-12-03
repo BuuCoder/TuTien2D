@@ -20,21 +20,21 @@ const TokenExpiredNotice = () => {
             
             // Không có user trong localStorage → Không hiện notice
             if (!userStr) {
-                console.log('[TokenExpiredNotice] No user in localStorage, skipping');
+                
                 return;
             }
 
             // Validate token (không auto-clear)
             const isValid = validateStoredToken(false);
             
-            console.log('[TokenExpiredNotice] Token validation result:', isValid);
+            
             
             // Token invalid → Hiện notice
             if (!isValid) {
-                console.log('[TokenExpiredNotice] Token invalid, showing notice');
+                
                 setShowNotice(true);
             } else {
-                console.log('[TokenExpiredNotice] Token valid, not showing notice');
+                
             }
         }, 1000); // Đợi 1s để store load xong
 

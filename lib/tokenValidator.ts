@@ -9,13 +9,11 @@ export function validateStoredToken(autoClear: boolean = false): boolean {
     try {
         const userStr = localStorage.getItem('tutien2d_user');
         if (!userStr) {
-            console.log('[TokenValidator] No user in localStorage');
             return false;
         }
 
         const user = JSON.parse(userStr);
         if (!user.socketToken) {
-            console.log('[TokenValidator] No token found');
             if (autoClear) {
                 localStorage.removeItem('tutien2d_user');
             }
@@ -25,7 +23,6 @@ export function validateStoredToken(autoClear: boolean = false): boolean {
         // Decode JWT token để check expiry
         const parts = user.socketToken.split('.');
         if (parts.length !== 3) {
-            console.log('[TokenValidator] Invalid token format');
             if (autoClear) {
                 localStorage.removeItem('tutien2d_user');
             }
@@ -36,15 +33,7 @@ export function validateStoredToken(autoClear: boolean = false): boolean {
         const expiresAt = new Date(payload.exp * 1000);
         const isExpired = Date.now() > payload.exp * 1000;
 
-        console.log('[TokenValidator] Token check:', {
-            userId: payload.userId,
-            username: payload.username,
-            expiresAt: expiresAt.toLocaleString(),
-            isExpired
-        });
-
         if (isExpired) {
-            console.log('[TokenValidator] Token expired');
             if (autoClear) {
                 localStorage.removeItem('tutien2d_user');
                 localStorage.removeItem('tutien2d_playerStats');
@@ -52,7 +41,6 @@ export function validateStoredToken(autoClear: boolean = false): boolean {
             return false;
         }
 
-        console.log('[TokenValidator] Token valid ✅');
         return true;
 
     } catch (error) {
@@ -75,6 +63,4 @@ export function clearStoredData() {
     localStorage.removeItem('tutien2d_playerStats');
     localStorage.removeItem('tutien2d_currentMap');
     localStorage.removeItem('tutien2d_playerPosition');
-    
-    console.log('[TokenValidator] All stored data cleared');
 }

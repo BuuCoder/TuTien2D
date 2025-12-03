@@ -23,6 +23,17 @@ import TokenExpiredNotice from './TokenExpiredNotice';
 
 const GameContent = () => {
     const { user, currentMapId } = useGameStore();
+    const [isCheckingAuth, setIsCheckingAuth] = React.useState(true);
+
+    // Check auth on mount
+    useEffect(() => {
+        // Give time for store to restore user from localStorage
+        const timer = setTimeout(() => {
+            setIsCheckingAuth(false);
+        }, 100); // Very short delay, just enough for sync restore
+        
+        return () => clearTimeout(timer);
+    }, []);
 
     // Lưu game state khi chuyển map
     useEffect(() => {
@@ -30,6 +41,11 @@ const GameContent = () => {
             saveGameState();
         }
     }, [currentMapId, user]);
+
+    // Show nothing while checking (prevents flash)
+    if (isCheckingAuth) {
+        return null;
+    }
 
     if (!user) {
         return <LoginPage />;

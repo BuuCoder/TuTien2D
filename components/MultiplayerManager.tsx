@@ -27,7 +27,7 @@ const MultiplayerManager = () => {
     // Hàm join channel sử dụng socket instance được truyền vào
     // để tránh lỗi stale closure
     const joinChannelWithSocket = (socketInstance: any, channelId: number) => {
-        console.log(`Attempting to join channel ${channelId}`);
+        
         socketInstance.emit('join_channel', {
             channelId,
             playerData: {
@@ -43,7 +43,7 @@ const MultiplayerManager = () => {
     // Effect để validate session khi có socket và user (gửi kèm token)
     useEffect(() => {
         if (socket && isConnected && user) {
-            console.log('Validating session for user:', user.username);
+            
             socket.emit('validate_session', {
                 userId: user.id,
                 sessionId: user.sessionId,
@@ -56,7 +56,7 @@ const MultiplayerManager = () => {
     useEffect(() => {
         // Socket server runs on the same server as Next.js (server.js)
         // No need for separate socket URL
-        console.log('Connecting to socket server...');
+        
 
         const socketInstance = io({
             transports: ['websocket'],
@@ -64,13 +64,13 @@ const MultiplayerManager = () => {
         });
 
         socketInstance.on('connect', () => {
-            console.log('Connected to socket server');
+            
             setIsConnected(true);
         });
 
         socketInstance.on('session_validated', ({ success }: any) => {
             if (success) {
-                console.log('Session validated, auto-joining channel 1');
+                
                 // Sử dụng socketInstance trực tiếp
                 joinChannelWithSocket(socketInstance, 1);
             }
@@ -84,13 +84,13 @@ const MultiplayerManager = () => {
         });
 
         socketInstance.on('disconnect', () => {
-            console.log('Disconnected from socket server');
+            
             setIsConnected(false);
             setCurrentChannel(null);
         });
 
         socketInstance.on('channel_joined', ({ channelId, players }: any) => {
-            console.log(`Joined channel ${channelId} with ${players.length} players`);
+            
             setCurrentChannel(channelId);
 
             const playersMap = new Map();
@@ -108,7 +108,7 @@ const MultiplayerManager = () => {
         });
 
         socketInstance.on('channel_full', ({ channelId }: any) => {
-            console.log(`Channel ${channelId} is full`);
+            
             const nextChannel = channelId + 1;
             if (nextChannel <= 3) {
                 setNotification({ message: `Kênh ${channelId} đầy, đang chuyển sang kênh ${nextChannel}...`, type: 'info' });
@@ -120,7 +120,7 @@ const MultiplayerManager = () => {
         });
 
         socketInstance.on('player_joined', (player: any) => {
-            console.log('Player joined:', player);
+            
             updateOtherPlayer(player.id, player);
             
             // Only show notification if player is on the same map
@@ -145,12 +145,12 @@ const MultiplayerManager = () => {
         });
 
         socketInstance.on('player_left', (playerId: string) => {
-            console.log('Player left:', playerId);
+            
             
             // Check if this player was in active PK session
             const state = useGameStore.getState();
             if (state.activePKSessions.includes(playerId)) {
-                console.log('[PK] Opponent disconnected during PK:', playerId);
+                
                 
                 // Remove from PK session
                 state.removePKSession(playerId);
@@ -191,7 +191,7 @@ const MultiplayerManager = () => {
         });
 
         socketInstance.on('auth_error', ({ message }: any) => {
-            console.log('[Auth] Token invalid, clearing session');
+            
             setNotification({ 
                 message: message + ' - Vui lòng đăng nhập lại', 
                 type: 'error' 
@@ -239,7 +239,7 @@ const MultiplayerManager = () => {
         
         // Log when action changes
         if (actionChanged) {
-            console.log('[Multiplayer] Action changed:', lastAction.current, '->', playerAction);
+            
         }
         
         socket.emit('player_move', {

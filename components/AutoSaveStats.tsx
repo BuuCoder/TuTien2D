@@ -21,11 +21,11 @@ const AutoSaveStats = () => {
             return;
         }
 
-        console.log('[AutoSave] HP/MP auto-save is DISABLED');
-        console.log('[AutoSave] HP/MP are now updated via dedicated APIs:');
-        console.log('[AutoSave]   - /api/player/heal');
-        console.log('[AutoSave]   - /api/player/use-skill');
-        console.log('[AutoSave]   - /api/player/take-damage');
+        
+        
+        
+        
+        
 
         // TODO: Implement gold/items auto-save if needed
         

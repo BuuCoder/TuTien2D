@@ -24,7 +24,6 @@ export async function initEncryptionKey(keyHex: string) {
       false,
       ['encrypt', 'decrypt']
     );
-    console.log('[Encryption] Key initialized');
   } catch (error) {
     console.error('[Encryption] Failed to init key:', error);
   }

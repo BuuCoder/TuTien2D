@@ -47,7 +47,7 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
 
             // Only greet if haven't greeted yet for this approach
             if (!hasGreetedRef.current) {
-                console.log(`[NPC ${id}] Player approached, showing greeting`);
+                
                 hasGreetedRef.current = true;
 
                 // Auto-display greeting message
@@ -67,7 +67,7 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
                 })
                 .then(res => res.json())
                 .then(data => {
-                    console.log(`[NPC ${id}] Greeting response:`, data);
+                    
                     if (data.success && data.message) {
                         addNPCMessage(id, data.message);
                         autoGreetTimeoutRef.current = setTimeout(() => {

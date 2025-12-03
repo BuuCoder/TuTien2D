@@ -59,7 +59,7 @@ const MonsterManager = () => {
                 if (state.isBlocking) {
                     setNotification({ message: '🛡️ Miễn nhiễm tấn công quái!', type: 'success' });
                     addDamageIndicator(playerPosition.x, playerPosition.y, 0);
-                    console.log('[Monster] Blocked monster attack!');
+                    
                     return; // Không nhận damage
                 }
                 
@@ -107,7 +107,7 @@ const MonsterManager = () => {
                                 }, 3000);
                             }
 
-                            console.log('[Monster] Took damage:', result.damage, 'HP:', result.hp);
+                            
                         } else {
                             console.error('[Monster] Take damage API error:', result.error);
                         }
@@ -133,7 +133,7 @@ const MonsterManager = () => {
                     gold: data.newGold  // Gold từ server (đã lưu vào database)
                 });
                 
-                console.log('[Gold] Updated from server:', data.newGold);
+                
             }
             
             state.setNotification({
@@ -172,7 +172,7 @@ const MonsterManager = () => {
             return;
         }
         
-        console.log(`[MonsterManager] Requesting monsters for map ${currentMapId} in channel ${currentChannel}`);
+        
         
         // Clear old monsters
         setMonsters(new Map());

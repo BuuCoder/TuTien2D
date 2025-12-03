@@ -90,7 +90,7 @@ export const SKILLS: Record<string, Skill> = {
         description: 'Hồi phục HP cho bản thân',
         manaCost: 50,
         damage: -150, // Negative = healing
-        cooldown: 10000,
+        cooldown: 30000, // 30 giây
         range: 0,
         castTime: 1000,
         icon: '💚',
@@ -115,7 +115,7 @@ export const SKILLS: Record<string, Skill> = {
         description: 'Miễn nhiễm mọi tấn công trong 5 giây',
         manaCost: 10,
         damage: 0,
-        cooldown: 10000, // 10s cooldown
+        cooldown: 30000, // 30 giây
         range: 0,
         castTime: 0,
         icon: '🛡️',

@@ -309,16 +309,7 @@ export const useGameStore = create<GameState>((set) => ({
       playerStats: { ...state.playerStats, ...stats }
     }));
     
-    // Lưu HP/MP vào localStorage
-    if (typeof window !== 'undefined') {
-      const currentStats = useGameStore.getState().playerStats;
-      localStorage.setItem('tutien2d_playerStats', JSON.stringify({
-        currentHp: stats.currentHp ?? currentStats.currentHp,
-        mp: stats.mp ?? currentStats.mp,
-        maxHp: stats.maxHp ?? currentStats.maxHp,
-        maxMp: stats.maxMp ?? currentStats.maxMp,
-      }));
-    }
+    // HP/MP được đồng bộ với DB, không cần localStorage
   },
   skillCooldowns: [],
   addSkillCooldown: (skillId, duration) => set((state) => ({
@@ -406,14 +397,47 @@ if (typeof window !== 'undefined') {
         try {
           const user = JSON.parse(savedUser);
           useGameStore.setState({ user });
-          console.log('[Store] User restored from localStorage');
+          
+          // Fetch HP/MP từ database sau khi restore user
+          import('@/lib/requestObfuscator').then(({ sendObfuscatedRequest }) => {
+            sendObfuscatedRequest('/api/player/get-stats', {
+              userId: user.id,
+              sessionId: user.sessionId,
+              token: user.socketToken
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success && data.stats) {
+                // Update HP/MP
+                useGameStore.getState().setPlayerStats({
+                  currentHp: data.stats.hp,
+                  maxHp: data.stats.max_hp,
+                  mp: data.stats.mp,
+                  maxMp: data.stats.max_mp,
+                });
+                
+                // Update gold và level trong user object
+                const currentUser = useGameStore.getState().user;
+                if (currentUser) {
+                  useGameStore.setState({
+                    user: {
+                      ...currentUser,
+                      gold: data.gold,
+                      level: data.stats.level
+                    }
+                  });
+                }
+              }
+            })
+            .catch(err => console.error('Failed to fetch stats:', err));
+          });
+          
         } catch (e) {
           console.error('Failed to parse saved user:', e);
           localStorage.removeItem('tutien2d_user');
         }
       }
     } else {
-      console.log('[Store] Token invalid, user not restored');
     }
   });
 
@@ -435,23 +459,9 @@ if (typeof window !== 'undefined') {
     }
   }
 
-  // Khôi phục HP/MP
-  const savedStats = localStorage.getItem('tutien2d_playerStats');
-  if (savedStats) {
-    try {
-      const stats = JSON.parse(savedStats);
-      useGameStore.setState({ 
-        playerStats: {
-          ...useGameStore.getState().playerStats,
-          currentHp: stats.currentHp,
-          mp: stats.mp || stats.currentMana, // Support old format
-          maxHp: stats.maxHp || 500,
-          maxMp: stats.maxMp || stats.maxMana || 200, // Support old format
-        }
-      });
-    } catch (e) {
-      console.error('Failed to parse saved stats:', e);
-      localStorage.removeItem('tutien2d_playerStats');
-    }
-  }
+  // HP/MP được lấy từ API /player/get-stats sau khi login
+  // Không restore từ localStorage để tránh cheating
+  
+  // Clean up old localStorage data
+  localStorage.removeItem('tutien2d_playerStats');
 }
