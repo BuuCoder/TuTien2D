@@ -5,10 +5,9 @@ import { useGameStore } from '@/lib/store';
 import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
 
 const ProfileMenu = () => {
-    const { user, playerStats, setUser, setNotification, socket, currentChannel } = useGameStore();
+    const { user, playerStats, setUser, setNotification } = useGameStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-    const [showChannelSelect, setShowChannelSelect] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
 
     React.useEffect(() => {
@@ -70,35 +69,7 @@ const ProfileMenu = () => {
         }
     };
 
-    const handleChangeChannel = () => {
-        setShowChannelSelect(true);
-    };
 
-    const handleSelectChannel = (channelId: number) => {
-        if (!socket) {
-            setNotification({ message: 'Chưa kết nối server', type: 'error' });
-            return;
-        }
-
-        // Sử dụng logic join_channel giống MultiplayerManager
-        const playerPosition = useGameStore.getState().playerPosition;
-        const playerDirection = useGameStore.getState().playerDirection;
-        const currentMapId = useGameStore.getState().currentMapId;
-
-        socket.emit('join_channel', {
-            channelId,
-            playerData: {
-                x: playerPosition.x,
-                y: playerPosition.y,
-                direction: playerDirection,
-                mapId: currentMapId
-            }
-        });
-
-        setShowChannelSelect(false);
-        setIsMenuOpen(false);
-        setNotification({ message: `Đang chuyển sang kênh ${channelId}...`, type: 'info' });
-    };
 
     const hpPercent = (playerStats.currentHp / playerStats.maxHp) * 100;
     const mpPercent = (playerStats.mp / playerStats.maxMp) * 100;
@@ -115,49 +86,49 @@ const ProfileMenu = () => {
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 style={{
                     position: 'fixed',
-                    top: isMobile ? '10px' : '20px',
-                    left: isMobile ? '10px' : '20px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                    borderRadius: isMobile ? '12px' : '16px',
-                    padding: isMobile ? '8px' : '12px',
+                    top: isMobile ? '12px' : '16px',
+                    left: isMobile ? '12px' : '16px',
+                    backgroundColor: 'rgba(17, 17, 17, 0.95)',
+                    borderRadius: '8px',
+                    padding: isMobile ? '10px' : '14px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: isMobile ? '8px' : '12px',
+                    gap: isMobile ? '10px' : '14px',
                     cursor: 'pointer',
                     zIndex: 1000,
-                    border: '2px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
                     minWidth: isMobile ? '200px' : '280px',
                     maxWidth: isMobile ? '200px' : 'none',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.15s ease',
                     userSelect: 'none',
                 }}
                 onMouseEnter={(e) => {
                     if (!isMobile) {
-                        e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.95)';
-                        e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.5)';
+                        e.currentTarget.style.backgroundColor = 'rgba(24, 24, 24, 0.98)';
+                        e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
                     }
                 }}
                 onMouseLeave={(e) => {
                     if (!isMobile) {
-                        e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.backgroundColor = 'rgba(17, 17, 17, 0.95)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
                     }
                 }}
             >
                 {/* Avatar */}
                 <div
                     style={{
-                        width: isMobile ? '35px' : '50px',
-                        height: isMobile ? '35px' : '50px',
-                        borderRadius: '50%',
-                        backgroundColor: '#667eea',
+                        width: isMobile ? '36px' : '48px',
+                        height: isMobile ? '36px' : '48px',
+                        borderRadius: '6px',
+                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: isMobile ? '18px' : '24px',
                         flexShrink: 0,
-                        border: '2px solid rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
                     }}
                 >
                     👤
@@ -169,27 +140,29 @@ const ProfileMenu = () => {
                     <div style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
-                        gap: isMobile ? '4px' : '8px',
-                        marginBottom: isMobile ? '2px' : '4px'
+                        gap: isMobile ? '6px' : '8px',
+                        marginBottom: isMobile ? '4px' : '6px'
                     }}>
                         <span style={{ 
-                            color: 'white', 
-                            fontWeight: 'bold',
-                            fontSize: isMobile ? '11px' : '14px',
+                            color: '#f9fafb', 
+                            fontWeight: '600',
+                            fontSize: isMobile ? '12px' : '14px',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            letterSpacing: '-0.01em'
                         }}>
                             {user.username}
                         </span>
                         <span style={{
-                            backgroundColor: '#667eea',
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                             color: 'white',
-                            padding: isMobile ? '1px 5px' : '2px 8px',
-                            borderRadius: '12px',
-                            fontSize: isMobile ? '9px' : '11px',
-                            fontWeight: 'bold',
+                            padding: isMobile ? '2px 6px' : '3px 8px',
+                            borderRadius: '4px',
+                            fontSize: isMobile ? '9px' : '10px',
+                            fontWeight: '600',
                             flexShrink: 0,
+                            letterSpacing: '0.02em'
                         }}>
                             Lv.{user.level || 1}
                         </span>
@@ -197,30 +170,31 @@ const ProfileMenu = () => {
 
                     {/* Gold */}
                     <div style={{ 
-                        color: '#ffd700',
-                        fontSize: isMobile ? '10px' : '13px',
-                        fontWeight: 'bold',
-                        marginBottom: isMobile ? '3px' : '6px'
+                        color: '#fbbf24',
+                        fontSize: isMobile ? '11px' : '13px',
+                        fontWeight: '600',
+                        marginBottom: isMobile ? '4px' : '6px',
+                        letterSpacing: '-0.01em'
                     }}>
                         💰 {formatGold(user.gold || 0)}
                     </div>
 
                     {/* HP Bar */}
-                    <div style={{ marginBottom: isMobile ? '2px' : '4px' }}>
+                    <div style={{ marginBottom: isMobile ? '3px' : '4px' }}>
                         <div style={{
                             width: '100%',
-                            height: isMobile ? '12px' : '18px',
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                            borderRadius: isMobile ? '6px' : '9px',
+                            height: isMobile ? '14px' : '16px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                            borderRadius: '4px',
                             overflow: 'hidden',
                             position: 'relative',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
                         }}>
                             <div style={{
                                 width: `${hpPercent}%`,
                                 height: '100%',
-                                backgroundColor: hpPercent > 50 ? '#4ade80' : hpPercent > 25 ? '#fbbf24' : '#ef4444',
-                                transition: 'width 0.3s, background-color 0.3s',
+                                background: 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)',
+                                transition: 'width 0.3s ease',
                             }} />
                             <div style={{
                                 position: 'absolute',
@@ -228,9 +202,10 @@ const ProfileMenu = () => {
                                 left: '50%',
                                 transform: 'translate(-50%, -50%)',
                                 color: 'white',
-                                fontSize: isMobile ? '8px' : '11px',
-                                fontWeight: 'bold',
+                                fontSize: isMobile ? '9px' : '10px',
+                                fontWeight: '600',
                                 textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+                                letterSpacing: '-0.02em'
                             }}>
                                 {playerStats.currentHp}/{playerStats.maxHp}
                             </div>
@@ -241,18 +216,18 @@ const ProfileMenu = () => {
                     <div>
                         <div style={{
                             width: '100%',
-                            height: isMobile ? '12px' : '18px',
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                            borderRadius: isMobile ? '6px' : '9px',
+                            height: isMobile ? '14px' : '16px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                            borderRadius: '4px',
                             overflow: 'hidden',
                             position: 'relative',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
                         }}>
                             <div style={{
                                 width: `${mpPercent}%`,
                                 height: '100%',
-                                backgroundColor: '#3b82f6',
-                                transition: 'width 0.3s',
+                                background: 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)',
+                                transition: 'width 0.3s ease',
                             }} />
                             <div style={{
                                 position: 'absolute',
@@ -260,9 +235,10 @@ const ProfileMenu = () => {
                                 left: '50%',
                                 transform: 'translate(-50%, -50%)',
                                 color: 'white',
-                                fontSize: isMobile ? '8px' : '11px',
-                                fontWeight: 'bold',
+                                fontSize: isMobile ? '9px' : '10px',
+                                fontWeight: '600',
                                 textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+                                letterSpacing: '-0.02em'
                             }}>
                                 {playerStats.mp}/{playerStats.maxMp}
                             </div>
@@ -272,68 +248,44 @@ const ProfileMenu = () => {
             </div>
 
             {/* Dropdown Menu */}
-            {isMenuOpen && !showChannelSelect && (
+            {isMenuOpen && (
                 <div
                     style={{
                         position: 'fixed',
-                        top: isMobile ? '110px' : '160px',
-                        left: isMobile ? '10px' : '20px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
-                        borderRadius: '12px',
-                        padding: '8px',
+                        top: isMobile ? '110px' : '150px',
+                        left: isMobile ? '12px' : '16px',
+                        backgroundColor: 'rgba(17, 17, 17, 0.98)',
+                        borderRadius: '8px',
+                        padding: '6px',
                         zIndex: 1001,
-                        border: '2px solid rgba(255, 255, 255, 0.1)',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
                         minWidth: isMobile ? '160px' : '200px',
                     }}
                 >
-                    <button
-                        onClick={handleChangeChannel}
-                        style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            backgroundColor: 'transparent',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            textAlign: 'left',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'background-color 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(102, 126, 234, 0.3)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                    >
-                        🔄 Đổi Kênh
-                    </button>
                     <button
                         onClick={handleLogout}
                         disabled={isLoggingOut}
                         style={{
                             width: '100%',
-                            padding: '12px 16px',
+                            padding: '10px 12px',
                             backgroundColor: 'transparent',
-                            color: isLoggingOut ? '#999' : '#ef4444',
+                            color: isLoggingOut ? '#6b7280' : '#ef4444',
                             border: 'none',
-                            borderRadius: '8px',
+                            borderRadius: '6px',
                             cursor: isLoggingOut ? 'not-allowed' : 'pointer',
-                            fontSize: '14px',
+                            fontSize: '13px',
+                            fontWeight: '500',
                             textAlign: 'left',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            transition: 'background-color 0.2s',
+                            transition: 'background-color 0.15s ease',
+                            letterSpacing: '-0.01em'
                         }}
                         onMouseEnter={(e) => {
                             if (!isLoggingOut) {
-                                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
                             }
                         }}
                         onMouseLeave={(e) => {
@@ -345,94 +297,10 @@ const ProfileMenu = () => {
                 </div>
             )}
 
-            {/* Channel Selection Menu */}
-            {isMenuOpen && showChannelSelect && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: isMobile ? '110px' : '160px',
-                        left: isMobile ? '10px' : '20px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
-                        borderRadius: '12px',
-                        padding: '8px',
-                        zIndex: 1001,
-                        border: '2px solid rgba(255, 255, 255, 0.1)',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-                        minWidth: isMobile ? '160px' : '200px',
-                    }}
-                >
-                    <button
-                        onClick={() => setShowChannelSelect(false)}
-                        style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            backgroundColor: 'transparent',
-                            color: '#999',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            textAlign: 'left',
-                            marginBottom: '4px',
-                        }}
-                    >
-                        ← Quay lại
-                    </button>
-                    <div style={{ 
-                        color: 'white', 
-                        fontSize: '13px', 
-                        fontWeight: 'bold',
-                        padding: '8px 12px',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                        marginBottom: '4px'
-                    }}>
-                        Chọn kênh:
-                    </div>
-                    {[1, 2, 3].map((channelId) => (
-                        <button
-                            key={channelId}
-                            onClick={() => handleSelectChannel(channelId)}
-                            disabled={currentChannel === channelId}
-                            style={{
-                                width: '100%',
-                                padding: '12px 16px',
-                                backgroundColor: currentChannel === channelId ? 'rgba(102, 126, 234, 0.3)' : 'transparent',
-                                color: currentChannel === channelId ? '#667eea' : 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: currentChannel === channelId ? 'not-allowed' : 'pointer',
-                                fontSize: '14px',
-                                textAlign: 'left',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                transition: 'background-color 0.2s',
-                                opacity: currentChannel === channelId ? 0.7 : 1,
-                            }}
-                            onMouseEnter={(e) => {
-                                if (currentChannel !== channelId) {
-                                    e.currentTarget.style.backgroundColor = 'rgba(102, 126, 234, 0.2)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (currentChannel !== channelId) {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                }
-                            }}
-                        >
-                            📡 Kênh {channelId} {currentChannel === channelId && '(Hiện tại)'}
-                        </button>
-                    ))}
-                </div>
-            )}
-
             {/* Click outside to close menu */}
             {isMenuOpen && (
                 <div
-                    onClick={() => {
-                        setIsMenuOpen(false);
-                        setShowChannelSelect(false);
-                    }}
+                    onClick={() => setIsMenuOpen(false)}
                     style={{
                         position: 'fixed',
                         top: 0,

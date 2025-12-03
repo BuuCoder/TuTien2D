@@ -88,25 +88,28 @@ const CombatUI = () => {
             {activeEffects.length > 0 && (
                 <div style={{
                     position: 'fixed',
-                    top: '10px',
+                    top: '12px',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     zIndex: 1000,
                     display: 'flex',
                     gap: '6px',
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    padding: '6px 12px',
+                    backgroundColor: 'rgba(17, 17, 17, 0.95)',
+                    padding: '8px 12px',
                     borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
                 }}>
                     {activeEffects.map((effect, i) => (
                         <div key={i} style={{
-                            padding: '4px 8px',
-                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            padding: '6px 10px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
                             borderRadius: '6px',
-                            fontSize: '16px',
+                            fontSize: '18px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '4px',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
                         }}>
                             {effect.type === 'stun' && '😵'}
                             {effect.type === 'slow' && '🐌'}
@@ -120,15 +123,17 @@ const CombatUI = () => {
             {/* Skill Bar - Bottom (always visible) */}
             <div style={{
                 position: 'fixed',
-                bottom: '10px',
+                bottom: '12px',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 zIndex: 1000,
                 display: 'flex',
-                gap: isMobile ? '5px' : '6px',
-                backgroundColor: 'rgba(0,0,0,0.7)',
-                padding: isMobile ? '6px' : '8px',
+                gap: isMobile ? '6px' : '8px',
+                backgroundColor: 'rgba(17, 17, 17, 0.95)',
+                padding: isMobile ? '8px' : '10px',
                 borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
             }}>
                 {skillList.map((skillId, index) => {
                     const skill = SKILLS[skillId];
@@ -141,19 +146,57 @@ const CombatUI = () => {
                             onClick={() => handleSkillClick(skillId)}
                             style={{
                                 position: 'relative',
-                                width: isMobile ? '35px' : '45px',
-                                height: isMobile ? '35px' : '45px',
-                                backgroundColor: canUse ? 'rgba(76,175,80,0.8)' : 'rgba(100,100,100,0.8)',
+                                width: isMobile ? '40px' : '48px',
+                                height: isMobile ? '40px' : '48px',
+                                background: canUse 
+                                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%)' 
+                                    : 'rgba(55, 65, 81, 0.8)',
                                 borderRadius: '6px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 cursor: canUse ? 'pointer' : 'not-allowed',
-                                border: '1px solid rgba(255,255,255,0.3)',
-                                fontSize: isMobile ? '16px' : '20px',
-                                transition: 'all 0.2s',
+                                border: canUse 
+                                    ? '1px solid rgba(16, 185, 129, 0.3)' 
+                                    : '1px solid rgba(255, 255, 255, 0.08)',
+                                fontSize: isMobile ? '18px' : '22px',
+                                transition: 'all 0.1s ease',
+                                boxShadow: canUse 
+                                    ? '0 2px 8px rgba(16, 185, 129, 0.3)' 
+                                    : 'none',
+                                transform: 'translateY(0)',
                             }}
                             title={`${skill.name} (${skill.manaCost} mana)\n${skill.description}\nHotkey: ${index + 1}`}
+                            onMouseEnter={(e) => {
+                                if (canUse && !isMobile) {
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (canUse && !isMobile) {
+                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+                                }
+                            }}
+                            onMouseDown={(e) => {
+                                if (canUse) {
+                                    e.currentTarget.style.transform = 'scale(0.95)';
+                                }
+                            }}
+                            onMouseUp={(e) => {
+                                if (canUse) {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                }
+                            }}
+                            onTouchStart={(e) => {
+                                if (canUse) {
+                                    e.currentTarget.style.transform = 'scale(0.95)';
+                                }
+                            }}
+                            onTouchEnd={(e) => {
+                                if (canUse) {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                }
+                            }}
                         >
                             {skill.icon}
                             
@@ -165,7 +208,7 @@ const CombatUI = () => {
                                     left: 0,
                                     right: 0,
                                     height: `${cooldownPercent}%`,
-                                    backgroundColor: 'rgba(0,0,0,0.7)',
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                                     borderRadius: '0 0 5px 5px',
                                 }} />
                             )}
@@ -173,11 +216,13 @@ const CombatUI = () => {
                             {/* Hotkey number */}
                             <div style={{
                                 position: 'absolute',
-                                top: '1px',
-                                right: '3px',
-                                fontSize: '8px',
+                                top: '2px',
+                                right: '4px',
+                                fontSize: '9px',
                                 color: 'white',
-                                fontWeight: 'bold',
+                                fontWeight: '600',
+                                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)',
+                                letterSpacing: '-0.02em'
                             }}>
                                 {index + 1}
                             </div>
@@ -185,11 +230,13 @@ const CombatUI = () => {
                             {/* Mana cost */}
                             <div style={{
                                 position: 'absolute',
-                                bottom: '1px',
-                                right: '3px',
-                                fontSize: '7px',
-                                color: '#3498db',
-                                fontWeight: 'bold',
+                                bottom: '2px',
+                                right: '4px',
+                                fontSize: '8px',
+                                color: '#60a5fa',
+                                fontWeight: '600',
+                                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)',
+                                letterSpacing: '-0.02em'
                             }}>
                                 {skill.manaCost}
                             </div>

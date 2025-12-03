@@ -68,28 +68,32 @@ const PlayerChatBubbles = () => {
                     zIndex: 10000
                 }}>
                     <div style={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                        color: 'white',
+                        backgroundColor: 'rgba(17, 17, 17, 0.95)',
+                        backdropFilter: 'blur(10px)',
+                        color: '#f9fafb',
                         padding: '8px 12px',
-                        borderRadius: '12px',
+                        borderRadius: '8px',
                         fontSize: '13px',
+                        fontWeight: '500',
+                        letterSpacing: '-0.01em',
                         maxWidth: '200px',
                         wordWrap: 'break-word',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                        border: '2px solid #667eea',
-                        position: 'relative'
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                        border: '1px solid rgba(59, 130, 246, 0.4)',
+                        position: 'relative',
+                        lineHeight: '1.4'
                     }}>
                         {activeBubbles.get(user.id)?.message}
                         <div style={{
                             position: 'absolute',
-                            bottom: '-8px',
+                            bottom: '-6px',
                             left: '50%',
                             transform: 'translateX(-50%)',
                             width: 0,
                             height: 0,
-                            borderLeft: '8px solid transparent',
-                            borderRight: '8px solid transparent',
-                            borderTop: '8px solid #667eea'
+                            borderLeft: '6px solid transparent',
+                            borderRight: '6px solid transparent',
+                            borderTop: '6px solid rgba(17, 17, 17, 0.95)'
                         }} />
                     </div>
                 </div>
@@ -112,28 +116,32 @@ const PlayerChatBubbles = () => {
                         }}
                     >
                         <div style={{
-                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                            color: 'white',
+                            backgroundColor: 'rgba(17, 17, 17, 0.95)',
+                            backdropFilter: 'blur(10px)',
+                            color: '#f9fafb',
                             padding: '8px 12px',
-                            borderRadius: '12px',
+                            borderRadius: '8px',
                             fontSize: '13px',
+                            fontWeight: '500',
+                            letterSpacing: '-0.01em',
                             maxWidth: '200px',
                             wordWrap: 'break-word',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                            border: '2px solid #555',
-                            position: 'relative'
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            position: 'relative',
+                            lineHeight: '1.4'
                         }}>
                             {bubble.message}
                             <div style={{
                                 position: 'absolute',
-                                bottom: '-8px',
+                                bottom: '-6px',
                                 left: '50%',
                                 transform: 'translateX(-50%)',
                                 width: 0,
                                 height: 0,
-                                borderLeft: '8px solid transparent',
-                                borderRight: '8px solid transparent',
-                                borderTop: '8px solid #555'
+                                borderLeft: '6px solid transparent',
+                                borderRight: '6px solid transparent',
+                                borderTop: '6px solid rgba(17, 17, 17, 0.95)'
                             }} />
                         </div>
                     </div>

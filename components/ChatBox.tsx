@@ -203,18 +203,37 @@ const ChatBox = () => {
         >
             {/* Header */}
             <div className={styles.header}>
-                <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
-                    💬 Chat - Kênh {currentChannel || '?'}
+                <div style={{ 
+                    color: '#f9fafb', 
+                    fontWeight: '600', 
+                    fontSize: '14px',
+                    letterSpacing: '-0.01em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                }}>
+                    <span style={{ fontSize: '16px' }}>💬</span>
+                    Chat - Kênh {currentChannel || '?'}
                 </div>
                 <button
                     onClick={() => setIsOpen(false)}
                     style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'white',
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '4px',
+                        color: '#ef4444',
                         cursor: 'pointer',
-                        fontSize: '18px',
-                        padding: '0 4px'
+                        fontSize: '16px',
+                        padding: '4px 8px',
+                        fontWeight: '600',
+                        transition: 'all 0.15s ease',
+                        lineHeight: 1
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
                     }}
                 >
                     ✕
@@ -235,25 +254,28 @@ const ChatBox = () => {
                         className={styles.messageItem}
                         style={{
                             backgroundColor: msg.userId === user?.id
-                                ? 'rgba(102, 126, 234, 0.3)'
-                                : 'rgba(255, 255, 255, 0.05)',
+                                ? 'rgba(59, 130, 246, 0.15)'
+                                : 'rgba(255, 255, 255, 0.04)',
                             borderLeft: msg.userId === user?.id
-                                ? '3px solid #667eea'
-                                : '3px solid #555'
+                                ? '2px solid #3b82f6'
+                                : '2px solid rgba(255, 255, 255, 0.1)'
                         }}
                     >
                         <div style={{
                             fontSize: '11px',
-                            color: '#aaa',
+                            color: msg.userId === user?.id ? '#60a5fa' : '#9ca3af',
                             marginBottom: '4px',
-                            fontWeight: 'bold'
+                            fontWeight: '600',
+                            letterSpacing: '-0.01em'
                         }}>
                             {msg.username}
                         </div>
                         <div style={{
                             fontSize: '13px',
-                            color: 'white',
-                            wordWrap: 'break-word'
+                            color: '#f9fafb',
+                            wordWrap: 'break-word',
+                            lineHeight: '1.5',
+                            letterSpacing: '-0.01em'
                         }}>
                             {msg.message}
                         </div>
@@ -278,8 +300,13 @@ const ChatBox = () => {
                     disabled={!inputMessage.trim()}
                     className={styles.sendButton}
                     style={{
-                        backgroundColor: inputMessage.trim() ? '#667eea' : '#555',
+                        background: inputMessage.trim() 
+                            ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.9) 100%)'
+                            : 'rgba(55, 65, 81, 0.5)',
                         cursor: inputMessage.trim() ? 'pointer' : 'not-allowed',
+                        border: inputMessage.trim() 
+                            ? '1px solid rgba(59, 130, 246, 0.3)'
+                            : '1px solid rgba(255, 255, 255, 0.08)',
                     }}
                 >
                     Gửi
