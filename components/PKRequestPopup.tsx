@@ -44,10 +44,10 @@ const PKRequestPopup = () => {
         addPKSession(request.fromSocketId);
         removePKRequest(request.requestId);
 
-        // Hồi phục HP/Mana khi chấp nhận PK
+        // Hồi phục HP/MP khi chấp nhận PK
         state.setPlayerStats({
             currentHp: state.playerStats.maxHp,
-            currentMana: state.playerStats.maxMana
+            mp: state.playerStats.maxMp
         });
 
         socket.emit('update_hp', {

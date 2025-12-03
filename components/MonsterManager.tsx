@@ -74,7 +74,7 @@ const MonsterManager = () => {
                         state.setPlayerPosition(400, 300);
                         state.setPlayerStats({
                             currentHp: state.playerStats.maxHp,
-                            currentMana: state.playerStats.maxMana
+                            mp: state.playerStats.maxMp
                         });
                         socket.emit('update_hp', {
                             hp: state.playerStats.maxHp,

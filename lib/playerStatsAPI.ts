@@ -270,15 +270,21 @@ export const ATTACK_SKILLS = {
  * Helper để kiểm tra có đủ MP không (client-side check trước khi gọi API)
  */
 export function hasEnoughMP(currentMP: number, skillId: string, skillType: 'heal' | 'attack'): boolean {
-  const skills = skillType === 'heal' ? HEALING_SKILLS : ATTACK_SKILLS;
-  const skill = skills[skillId as keyof typeof skills];
-  
-  if (!skill) {
-    console.warn(`[PlayerStatsAPI] Unknown skill: ${skillId}`);
-    return false;
+  if (skillType === 'heal') {
+    const skill = HEALING_SKILLS[skillId as keyof typeof HEALING_SKILLS];
+    if (!skill) {
+      console.warn(`[PlayerStatsAPI] Unknown healing skill: ${skillId}`);
+      return false;
+    }
+    return currentMP >= skill.mpCost;
+  } else {
+    const skill = ATTACK_SKILLS[skillId as keyof typeof ATTACK_SKILLS];
+    if (!skill) {
+      console.warn(`[PlayerStatsAPI] Unknown attack skill: ${skillId}`);
+      return false;
+    }
+    return currentMP >= skill.mpCost;
   }
-
-  return currentMP >= skill.mpCost;
 }
 
 /**

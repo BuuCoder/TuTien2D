@@ -96,6 +96,9 @@ Tạo `lib/playerStatsAPI.ts` với các hàm helper:
 - `app/api/player/update-stats/route.js` - Loại bỏ khả năng cập nhật HP/MP
 - `components/UI.tsx` - Thêm nút đăng xuất và user info
 - `components/CombatUI.tsx` - Hiển thị thanh combat luôn ở dưới
+- `components/PKRequestPopup.tsx` - Sửa currentMana → mp
+- `components/MonsterManager.tsx` - Sửa currentMana → mp
+- `lib/store.ts` - Đổi tên trường để khớp với database
 - `README.md` - Thêm thông tin về security update
 
 ### Cần cập nhật (TODO)
