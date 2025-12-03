@@ -1,12 +1,3 @@
-import GameMap from '@/components/GameMap';
-import Instructions from '@/components/UI';
-import Joystick from '@/components/Joystick';
-import InteractButton from '@/components/InteractButton';
-import MenuPopup from '@/components/MenuPopup';
-import NotificationPopup from '@/components/NotificationPopup';
-import TargetIndicator from '@/components/TargetIndicator';
-import LoginPage from '@/components/LoginPage';
-import MultiplayerManager from '@/components/MultiplayerManager';
 import GameContent from '@/components/GameContent';
 
 export default function Home() {
