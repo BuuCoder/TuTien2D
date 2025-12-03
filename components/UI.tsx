@@ -7,7 +7,8 @@ import { MAPS } from '@/lib/gameData';
 const Instructions = () => {
     const [isMobile, setIsMobile] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
-    const { currentMapId, currentChannel } = useGameStore();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const { currentMapId, currentChannel, user, setUser, setNotification } = useGameStore();
 
     useEffect(() => {
         setIsMounted(true);
@@ -19,6 +20,62 @@ const Instructions = () => {
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
+
+    const handleLogout = async () => {
+        if (!user || isLoggingOut) return;
+
+        const confirmLogout = window.confirm('Bạn có chắc muốn đăng xuất?');
+        if (!confirmLogout) return;
+
+        setIsLoggingOut(true);
+
+        try {
+            // Call logout API
+            const response = await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.id,
+                    sessionId: user.sessionId,
+                    token: user.socketToken
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Clear user data
+                setUser(null);
+                
+                // Clear localStorage
+                localStorage.removeItem('gameState');
+                localStorage.removeItem('user');
+                
+                setNotification({
+                    message: 'Đăng xuất thành công!',
+                    type: 'success'
+                });
+
+                // Reload page to reset state
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            } else {
+                setNotification({
+                    message: data.error || 'Đăng xuất thất bại',
+                    type: 'error'
+                });
+                setIsLoggingOut(false);
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            setNotification({
+                message: 'Lỗi kết nối server',
+                type: 'error'
+            });
+            setIsLoggingOut(false);
+        }
+    };
 
     if (!isMounted) return null;
 
@@ -58,6 +115,69 @@ const Instructions = () => {
                     </div>
                 )}
             </div>
+
+            {/* User Info & Logout - Top Right */}
+            {user && (
+                <div style={{
+                    position: 'fixed',
+                    top: '15px',
+                    right: '15px',
+                    color: 'white',
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    padding: '8px 14px',
+                    borderRadius: '6px',
+                    fontFamily: 'sans-serif',
+                    zIndex: 100,
+                    fontSize: '13px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                }}>
+                    <div>
+                        <div style={{ 
+                            fontWeight: 'bold', 
+                            fontSize: '14px',
+                        }}>
+                            👤 {user.username}
+                        </div>
+                        <div style={{ 
+                            fontSize: '11px', 
+                            color: '#aaa',
+                        }}>
+                            Level {user.level || 1}
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        style={{
+                            backgroundColor: isLoggingOut ? 'rgba(100,100,100,0.8)' : 'rgba(231,76,60,0.8)',
+                            color: 'white',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            borderRadius: '4px',
+                            padding: '4px 10px',
+                            fontSize: '11px',
+                            cursor: isLoggingOut ? 'not-allowed' : 'pointer',
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                            if (!isLoggingOut) {
+                                e.currentTarget.style.backgroundColor = 'rgba(192,57,43,0.9)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!isLoggingOut) {
+                                e.currentTarget.style.backgroundColor = 'rgba(231,76,60,0.8)';
+                            }
+                        }}
+                    >
+                        {isLoggingOut ? '...' : '🚪 Đăng xuất'}
+                    </button>
+                </div>
+            )}
 
             {/* Instructions - Desktop only */}
             {!isMobile && (

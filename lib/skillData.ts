@@ -125,8 +125,8 @@ export const SKILLS: Record<string, Skill> = {
 export interface PlayerStats {
     maxHp: number;
     currentHp: number;
-    maxMana: number;
-    currentMana: number;
+    maxMp: number;
+    mp: number;
     attack: number;
     defense: number;
     speed: number;
@@ -135,8 +135,8 @@ export interface PlayerStats {
 export const DEFAULT_STATS: PlayerStats = {
     maxHp: 500,
     currentHp: 500,
-    maxMana: 200,
-    currentMana: 200,
+    maxMp: 200,
+    mp: 200,
     attack: 10,
     defense: 5,
     speed: 5,

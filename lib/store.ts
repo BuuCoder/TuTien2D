@@ -64,8 +64,8 @@ interface User {
 interface PlayerStats {
   maxHp: number;
   currentHp: number;
-  maxMana: number;
-  currentMana: number;
+  maxMp: number;
+  mp: number;
   attack: number;
   defense: number;
 }
@@ -299,8 +299,8 @@ export const useGameStore = create<GameState>((set) => ({
   playerStats: {
     maxHp: 500,
     currentHp: 500,
-    maxMana: 200,
-    currentMana: 200,
+    maxMp: 200,
+    mp: 200,
     attack: 10,
     defense: 5,
   },
@@ -309,14 +309,14 @@ export const useGameStore = create<GameState>((set) => ({
       playerStats: { ...state.playerStats, ...stats }
     }));
     
-    // Lưu HP/Mana vào localStorage
+    // Lưu HP/MP vào localStorage
     if (typeof window !== 'undefined') {
       const currentStats = useGameStore.getState().playerStats;
       localStorage.setItem('tutien2d_playerStats', JSON.stringify({
         currentHp: stats.currentHp ?? currentStats.currentHp,
-        currentMana: stats.currentMana ?? currentStats.currentMana,
+        mp: stats.mp ?? currentStats.mp,
         maxHp: stats.maxHp ?? currentStats.maxHp,
-        maxMana: stats.maxMana ?? currentStats.maxMana,
+        maxMp: stats.maxMp ?? currentStats.maxMp,
       }));
     }
   },
@@ -435,7 +435,7 @@ if (typeof window !== 'undefined') {
     }
   }
 
-  // Khôi phục HP/Mana
+  // Khôi phục HP/MP
   const savedStats = localStorage.getItem('tutien2d_playerStats');
   if (savedStats) {
     try {
@@ -444,9 +444,9 @@ if (typeof window !== 'undefined') {
         playerStats: {
           ...useGameStore.getState().playerStats,
           currentHp: stats.currentHp,
-          currentMana: stats.currentMana,
+          mp: stats.mp || stats.currentMana, // Support old format
           maxHp: stats.maxHp || 500,
-          maxMana: stats.maxMana || 200,
+          maxMp: stats.maxMp || stats.maxMana || 200, // Support old format
         }
       });
     } catch (e) {

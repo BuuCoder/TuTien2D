@@ -35,7 +35,7 @@ const AutoSaveStats = () => {
                         sessionId: user.sessionId,
                         token: user.socketToken,
                         currentHp: playerStats.currentHp,
-                        currentMana: playerStats.currentMana,
+                        mp: playerStats.mp,
                     })
                 });
 
@@ -43,7 +43,7 @@ const AutoSaveStats = () => {
                     lastSaveTime.current = now;
                     console.log('[AutoSave] Stats saved:', {
                         hp: playerStats.currentHp,
-                        mana: playerStats.currentMana
+                        mana: playerStats.mp
                     });
                 } else {
                     const errorData = await response.json();
@@ -59,7 +59,7 @@ const AutoSaveStats = () => {
                 clearInterval(saveInterval.current);
             }
         };
-    }, [user, playerStats.currentHp, playerStats.currentMana]);
+    }, [user, playerStats.currentHp, playerStats.mp]);
 
     // Save khi unmount (đóng tab/logout)
     useEffect(() => {
@@ -75,7 +75,7 @@ const AutoSaveStats = () => {
                         sessionId: user.sessionId,
                         token: user.socketToken,
                         currentHp: playerStats.currentHp,
-                        currentMana: playerStats.currentMana,
+                        mp: playerStats.mp,
                     }),
                     keepalive: true // Đảm bảo request hoàn thành khi đóng tab
                 });
@@ -92,7 +92,7 @@ const AutoSaveStats = () => {
                 sessionId: user.sessionId,
                 token: user.socketToken,
                 currentHp: playerStats.currentHp,
-                currentMana: playerStats.currentMana,
+                mp: playerStats.mp,
             });
 
             const blob = new Blob([data], { type: 'application/json' });
@@ -106,9 +106,10 @@ const AutoSaveStats = () => {
             // Save one last time when component unmounts
             saveStats();
         };
-    }, [user, playerStats.currentHp, playerStats.currentMana]);
+    }, [user, playerStats.currentHp, playerStats.mp]);
 
     return null; // Component không render gì
 };
 
 export default AutoSaveStats;
+

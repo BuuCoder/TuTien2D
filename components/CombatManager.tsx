@@ -99,7 +99,7 @@ const CombatManager = () => {
         }
 
         // Check mana
-        if (playerStats.currentMana < skill.manaCost) {
+        if (playerStats.mp < skill.manaCost) {
             setNotification({ message: 'Không đủ mana!', type: 'error' });
             return;
         }
@@ -169,7 +169,7 @@ const CombatManager = () => {
 
         // Consume mana
         setPlayerStats({ 
-            currentMana: Math.max(0, playerStats.currentMana - skill.manaCost) 
+            mp: Math.max(0, playerStats.mp - skill.manaCost) 
         });
 
         // Add cooldown
@@ -290,7 +290,7 @@ const CombatManager = () => {
                         useGameStore.getState().setPlayerPosition(400, 300);
                         setPlayerStats({
                             currentHp: playerStats.maxHp,
-                            currentMana: playerStats.maxMana
+                            mp: playerStats.maxMp
                         });
                     }, 1000);
                 }
@@ -299,7 +299,7 @@ const CombatManager = () => {
             const interval = setInterval(checkMapChange, 500);
             return () => clearInterval(interval);
         }
-    }, [socket, setNotification, setPlayerStats, playerStats.maxHp, playerStats.maxMana]);
+    }, [socket, setNotification, setPlayerStats, playerStats.maxHp, playerStats.maxMp]);
 
     // Listen for PK requests
     useEffect(() => {
@@ -323,7 +323,7 @@ const CombatManager = () => {
                 // Hồi phục HP/Mana khi bắt đầu PK
                 setPlayerStats({
                     currentHp: state.playerStats.maxHp,
-                    currentMana: state.playerStats.maxMana
+                    mp: state.playerStats.maxMp
                 });
                 
                 emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
@@ -450,13 +450,13 @@ const CombatManager = () => {
                     // Teleport to spawn and heal after 3 seconds
                     setTimeout(() => {
                         const maxHp = useGameStore.getState().playerStats.maxHp;
-                        const maxMana = useGameStore.getState().playerStats.maxMana;
+                        const maxMp = useGameStore.getState().playerStats.maxMp;
                         
                         useGameStore.getState().setCurrentMapId('map1');
                         useGameStore.getState().setPlayerPosition(400, 300);
                         setPlayerStats({ 
                             currentHp: maxHp,
-                            currentMana: maxMana 
+                            mp: maxMp 
                         });
                         emitHPUpdate(maxHp, maxHp);
                         setNotification({ message: '🏥 Hồi sinh tại Làng Tân Thủ!', type: 'info' });
@@ -490,7 +490,7 @@ const CombatManager = () => {
                 // Hồi phục HP/Mana sau khi thắng
                 setPlayerStats({
                     currentHp: state.playerStats.maxHp,
-                    currentMana: state.playerStats.maxMana
+                    mp: state.playerStats.maxMp
                 });
                 
                 emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
@@ -520,7 +520,7 @@ const CombatManager = () => {
             // Hồi phục HP/Mana sau khi thắng
             setPlayerStats({
                 currentHp: state.playerStats.maxHp,
-                currentMana: state.playerStats.maxMana
+                mp: state.playerStats.maxMp
             });
             
             emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
@@ -548,7 +548,7 @@ const CombatManager = () => {
             // Hồi phục HP/Mana khi kết thúc PK
             setPlayerStats({
                 currentHp: state.playerStats.maxHp,
-                currentMana: state.playerStats.maxMana
+                mp: state.playerStats.maxMp
             });
             
             emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
@@ -588,12 +588,12 @@ const CombatManager = () => {
     // Mana regeneration
     useEffect(() => {
         const interval = setInterval(() => {
-            const currentMana = useGameStore.getState().playerStats.currentMana;
-            const maxMana = useGameStore.getState().playerStats.maxMana;
+            const mp = useGameStore.getState().playerStats.mp;
+            const maxMp = useGameStore.getState().playerStats.maxMp;
             
-            if (currentMana < maxMana) {
+            if (mp < maxMp) {
                 setPlayerStats({ 
-                    currentMana: Math.min(maxMana, currentMana + 2) 
+                    mp: Math.min(maxMp, mp + 2) 
                 });
             }
         }, 1000);
@@ -605,3 +605,4 @@ const CombatManager = () => {
 };
 
 export default CombatManager;
+

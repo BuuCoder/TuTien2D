@@ -1,5 +1,21 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## TuTien 2D - Multiplayer Game
+
+Game nhập vai 2D với hệ thống combat, multiplayer và PK.
+
+### Security Update (Latest)
+
+Hệ thống đã được cập nhật để ngăn chặn việc client gửi HP/Mana giả:
+- ✅ HP/Mana được validate và quản lý hoàn toàn ở server-side
+- ✅ Mọi action (heal, attack, take damage) đều được validate từ database
+- ✅ JWT token authentication cho mọi API request
+- ✅ Rate limiting và anti-cheat validation
+
+**Xem thêm:**
+- [API Security Documentation](./docs/API_SECURITY.md)
+- [Migration Guide](./docs/MIGRATION_GUIDE.md)
+
 ## Getting Started
 
 First, run the development server:

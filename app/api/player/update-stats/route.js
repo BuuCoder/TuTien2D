@@ -4,10 +4,10 @@ import { verifyToken } from '@/lib/jwt.mjs';
 
 export async function POST(req) {
     try {
-        const { userId, sessionId, token, currentHp, currentMana } = await req.json();
+        const { userId, sessionId, token, gold, items } = await req.json();
 
         // Debug logging
-        console.log('[UpdateStats] Request:', { userId, sessionId, hasToken: !!token, currentHp, currentMana });
+        console.log('[UpdateStats] Request:', { userId, sessionId, hasToken: !!token });
 
         if (!token) {
             console.log('[UpdateStats] No token provided');
@@ -41,11 +41,30 @@ export async function POST(req) {
             );
         }
 
-        // Update stats in database
-        await db.query(
-            'UPDATE user_stats SET hp = ?, mp = ? WHERE user_id = ?',
-            [currentHp, currentMana, userId]
-        );
+        // CHỈ cho phép cập nhật gold và items, KHÔNG cho phép cập nhật HP/MP
+        // HP/MP chỉ được cập nhật qua các API chuyên dụng: heal, use-skill, take-damage
+        if (gold !== undefined || items !== undefined) {
+            const updates = [];
+            const values = [];
+
+            if (gold !== undefined) {
+                updates.push('gold = ?');
+                values.push(gold);
+            }
+
+            if (items !== undefined) {
+                updates.push('items = ?');
+                values.push(JSON.stringify(items));
+            }
+
+            if (updates.length > 0) {
+                values.push(userId);
+                await db.query(
+                    `UPDATE user_inventory SET ${updates.join(', ')} WHERE user_id = ?`,
+                    values
+                );
+            }
+        }
 
         console.log('[UpdateStats] Stats updated successfully for user', userId);
 

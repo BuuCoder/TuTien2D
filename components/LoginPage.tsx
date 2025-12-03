@@ -35,13 +35,13 @@ const LoginPage = () => {
                     level: data.stats.level
                 });
 
-                // Lưu HP/Mana từ database
+                // Lưu HP/MP từ database
                 const { setPlayerStats } = useGameStore.getState();
                 setPlayerStats({
                     currentHp: data.stats.hp || 500,
                     maxHp: data.stats.max_hp || 500,
-                    currentMana: data.stats.mana || 200,
-                    maxMana: data.stats.max_mana || 200,
+                    mp: data.stats.mp || 200,
+                    maxMp: data.stats.max_mp || 200,
                 });
 
                 setNotification({ message: 'Đăng nhập thành công!', type: 'success' });

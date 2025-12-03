@@ -45,7 +45,7 @@ const CombatUI = () => {
         }
 
         // Check mana
-        if (playerStats.currentMana < skill.manaCost) {
+        if (playerStats.mp < skill.manaCost) {
             useGameStore.getState().setNotification({
                 message: 'Không đủ mana!',
                 type: 'error'
@@ -119,7 +119,7 @@ const CombatUI = () => {
                 {/* Mana Bar */}
                 <div>
                     <div style={{ fontSize: '9px', color: 'white', marginBottom: '2px' }}>
-                        Mana: {playerStats.currentMana}/{playerStats.maxMana}
+                        Mana: {playerStats.mp}/{playerStats.maxMp}
                     </div>
                     <div style={{
                         width: isMobile ? '180px' : '250px',
@@ -130,7 +130,7 @@ const CombatUI = () => {
                         border: '1px solid rgba(255,255,255,0.3)',
                     }}>
                         <div style={{
-                            width: `${(playerStats.currentMana / playerStats.maxMana) * 100}%`,
+                            width: `${(playerStats.mp / playerStats.maxMp) * 100}%`,
                             height: '100%',
                             backgroundColor: '#3498db',
                             transition: 'width 0.3s',
@@ -159,88 +159,86 @@ const CombatUI = () => {
                 )}
             </div>
 
-            {/* Skill Bar - Bottom (show when in PK mode or active PK) */}
-            {(isPKMode || activePKSessions.length > 0) && (
-                <div style={{
-                    position: 'fixed',
-                    bottom: '10px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    zIndex: 1000,
-                    display: 'flex',
-                    gap: isMobile ? '5px' : '6px',
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    padding: isMobile ? '6px' : '8px',
-                    borderRadius: '8px',
-                }}>
-                    {skillList.map((skillId, index) => {
-                        const skill = SKILLS[skillId];
-                        const cooldownPercent = getSkillCooldownPercent(skillId);
-                        const canUse = playerStats.currentMana >= skill.manaCost && cooldownPercent === 0;
+            {/* Skill Bar - Bottom (always visible) */}
+            <div style={{
+                position: 'fixed',
+                bottom: '10px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 1000,
+                display: 'flex',
+                gap: isMobile ? '5px' : '6px',
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                padding: isMobile ? '6px' : '8px',
+                borderRadius: '8px',
+            }}>
+                {skillList.map((skillId, index) => {
+                    const skill = SKILLS[skillId];
+                    const cooldownPercent = getSkillCooldownPercent(skillId);
+                    const canUse = playerStats.mp >= skill.manaCost && cooldownPercent === 0;
 
-                        return (
-                            <div
-                                key={skillId}
-                                onClick={() => handleSkillClick(skillId)}
-                                style={{
-                                    position: 'relative',
-                                    width: isMobile ? '35px' : '45px',
-                                    height: isMobile ? '35px' : '45px',
-                                    backgroundColor: canUse ? 'rgba(76,175,80,0.8)' : 'rgba(100,100,100,0.8)',
-                                    borderRadius: '6px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: canUse ? 'pointer' : 'not-allowed',
-                                    border: '1px solid rgba(255,255,255,0.3)',
-                                    fontSize: isMobile ? '16px' : '20px',
-                                    transition: 'all 0.2s',
-                                }}
-                                title={`${skill.name} (${skill.manaCost} mana)\n${skill.description}\nHotkey: ${index + 1}`}
-                            >
-                                {skill.icon}
-                                
-                                {/* Cooldown overlay */}
-                                {cooldownPercent > 0 && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        bottom: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: `${cooldownPercent}%`,
-                                        backgroundColor: 'rgba(0,0,0,0.7)',
-                                        borderRadius: '0 0 5px 5px',
-                                    }} />
-                                )}
-
-                                {/* Hotkey number */}
+                    return (
+                        <div
+                            key={skillId}
+                            onClick={() => handleSkillClick(skillId)}
+                            style={{
+                                position: 'relative',
+                                width: isMobile ? '35px' : '45px',
+                                height: isMobile ? '35px' : '45px',
+                                backgroundColor: canUse ? 'rgba(76,175,80,0.8)' : 'rgba(100,100,100,0.8)',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: canUse ? 'pointer' : 'not-allowed',
+                                border: '1px solid rgba(255,255,255,0.3)',
+                                fontSize: isMobile ? '16px' : '20px',
+                                transition: 'all 0.2s',
+                            }}
+                            title={`${skill.name} (${skill.manaCost} mana)\n${skill.description}\nHotkey: ${index + 1}`}
+                        >
+                            {skill.icon}
+                            
+                            {/* Cooldown overlay */}
+                            {cooldownPercent > 0 && (
                                 <div style={{
                                     position: 'absolute',
-                                    top: '1px',
-                                    right: '3px',
-                                    fontSize: '8px',
-                                    color: 'white',
-                                    fontWeight: 'bold',
-                                }}>
-                                    {index + 1}
-                                </div>
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: `${cooldownPercent}%`,
+                                    backgroundColor: 'rgba(0,0,0,0.7)',
+                                    borderRadius: '0 0 5px 5px',
+                                }} />
+                            )}
 
-                                {/* Mana cost */}
-                                <div style={{
-                                    position: 'absolute',
-                                    bottom: '1px',
-                                    right: '3px',
-                                    fontSize: '7px',
-                                    color: '#3498db',
-                                    fontWeight: 'bold',
-                                }}>
-                                    {skill.manaCost}
-                                </div>
+                            {/* Hotkey number */}
+                            <div style={{
+                                position: 'absolute',
+                                top: '1px',
+                                right: '3px',
+                                fontSize: '8px',
+                                color: 'white',
+                                fontWeight: 'bold',
+                            }}>
+                                {index + 1}
                             </div>
-                        );
-                    })}
-                </div>
-            )}
+
+                            {/* Mana cost */}
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '1px',
+                                right: '3px',
+                                fontSize: '7px',
+                                color: '#3498db',
+                                fontWeight: 'bold',
+                            }}>
+                                {skill.manaCost}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </>
     );
 };

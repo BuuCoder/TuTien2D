@@ -158,7 +158,7 @@ const MultiplayerManager = () => {
                 // Restore HP/Mana (winner gets full recovery)
                 state.setPlayerStats({
                     currentHp: state.playerStats.maxHp,
-                    currentMana: state.playerStats.maxMana
+                    mp: state.playerStats.maxMp
                 });
                 
                 // Emit HP update
@@ -387,3 +387,4 @@ const MultiplayerManager = () => {
 };
 
 export default MultiplayerManager;
+
