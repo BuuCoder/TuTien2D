@@ -11,6 +11,9 @@
     z-index: 9999;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    /* Allow touch events on chatbox even when GameMap has touchAction: none */
+    pointer-events: auto !important;
+    touch-action: auto !important;
 }
 
 .toggleButton {
@@ -27,6 +30,9 @@
     font-weight: bold;
     z-index: 9999;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    /* Ensure button receives touch events */
+    pointer-events: auto !important;
+    touch-action: auto !important;
 }
 
 /* Badge container needs to be positioned relative to button */
@@ -34,7 +40,7 @@
     position: fixed !important;
 }
 
-.toggleButton > div {
+.toggleButton>div {
     position: absolute;
 }
 
@@ -51,16 +57,20 @@
 
 .messages {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: auto !important;
     overflow-x: hidden;
     padding: 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    /* Fix scroll on mobile */
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    touch-action: pan-y;
+    /* Fix scroll on mobile - use !important to override parent touch blocking */
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+    pointer-events: auto !important;
+    will-change: scroll-position;
+    /* Ensure smooth scrolling */
+    scroll-behavior: smooth;
 }
 
 .messageItem {
@@ -82,7 +92,8 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 6px;
     color: white;
-    font-size: 16px; /* Prevent zoom on iOS */
+    font-size: 16px;
+    /* Prevent zoom on iOS */
     outline: none;
     touch-action: manipulation;
     -webkit-text-size-adjust: 100%;

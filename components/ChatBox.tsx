@@ -35,7 +35,7 @@ const ChatBox = () => {
             const state = useGameStore.getState();
             state.chatMessages = [];
             history.forEach(msg => addChatMessage(msg));
-            
+
             // Scroll to bottom immediately after loading history
             setTimeout(() => {
                 if (messagesContainerRef.current) {
@@ -53,7 +53,7 @@ const ChatBox = () => {
     // Load chat history when map or channel changes
     useEffect(() => {
         if (!socket || !currentMapId || !currentChannel) return;
-        
+
         // Request chat history for current map and channel
         socket.emit('load_chat_history', {
             mapId: currentMapId,
@@ -113,11 +113,11 @@ const ChatBox = () => {
         if (!isOpen && chatMessages.length > lastSeenCountRef.current) {
             const newMessages = chatMessages.slice(lastSeenCountRef.current);
             const newUnreadFromOthers = newMessages.filter(msg => msg.userId !== user.id).length;
-            
+
             if (newUnreadFromOthers > 0) {
                 setUnreadCount(prev => prev + newUnreadFromOthers);
             }
-            
+
             lastSeenCountRef.current = chatMessages.length;
         }
     }, [chatMessages, isOpen, user]);
@@ -141,6 +141,12 @@ const ChatBox = () => {
         }, 100);
     };
 
+    // Prevent touch events from propagating to GameMap
+    const handleTouchEvent = (e: React.TouchEvent) => {
+        // Stop the event from bubbling up to GameMap
+        e.stopPropagation();
+    };
+
     if (!isOpen) {
         return (
             <>
@@ -150,7 +156,7 @@ const ChatBox = () => {
                 >
                     💬 Chat
                     {unreadCount > 0 && (
-                        <div 
+                        <div
                             className="unread-badge"
                             style={{
                                 position: 'absolute',
@@ -189,7 +195,12 @@ const ChatBox = () => {
     }
 
     return (
-        <div className={styles.chatContainer}>
+        <div
+            className={styles.chatContainer}
+            onTouchStart={handleTouchEvent}
+            onTouchMove={handleTouchEvent}
+            onTouchEnd={handleTouchEvent}
+        >
             {/* Header */}
             <div className={styles.header}>
                 <div style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
@@ -211,7 +222,13 @@ const ChatBox = () => {
             </div>
 
             {/* Messages */}
-            <div ref={messagesContainerRef} className={styles.messages}>
+            <div
+                ref={messagesContainerRef}
+                className={styles.messages}
+                onTouchStart={handleTouchEvent}
+                onTouchMove={handleTouchEvent}
+                onTouchEnd={handleTouchEvent}
+            >
                 {chatMessages.map((msg, idx) => (
                     <div
                         key={idx}
