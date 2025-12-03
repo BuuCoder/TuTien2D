@@ -4,7 +4,8 @@ import React, { useEffect } from 'react';
 import { useGameStore } from '@/lib/store';
 import { saveGameState } from '@/lib/saveGameState';
 import GameMap from './GameMap';
-import Instructions from './UI';
+import ProfileMenu from './ProfileMenu';
+import MapName from './MapName';
 import Joystick from './Joystick';
 import InteractButton from './InteractButton';
 import MenuPopup from './MenuPopup';
@@ -56,7 +57,8 @@ const GameContent = () => {
             {/* TokenExpiredNotice chỉ hiện khi token thực sự expired */}
             {!user && <TokenExpiredNotice />}
             <GameMap />
-            <Instructions />
+            <ProfileMenu />
+            <MapName />
             <Joystick />
             <InteractButton />
             <MenuPopup />

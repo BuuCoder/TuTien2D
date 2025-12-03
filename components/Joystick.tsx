@@ -11,7 +11,17 @@ const Joystick = () => {
     const { setJoystickDirection } = useGameStore();
     const [isDragging, setIsDragging] = useState(false);
     const [knobPosition, setKnobPosition] = useState({ x: 0, y: 0 });
+    const [isMobile, setIsMobile] = useState(false);
     const joystickRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const handleStart = (clientX: number, clientY: number) => {
         setIsDragging(true);
@@ -111,12 +121,15 @@ const Joystick = () => {
         };
     }, [isDragging]);
 
+    // Ẩn joystick trên desktop
+    if (!isMobile) return null;
+
     return (
         <div
             ref={joystickRef}
             style={{
                 position: 'fixed',
-                bottom: '30px',
+                bottom: '80px',
                 left: '30px',
                 width: `${JOYSTICK_SIZE}px`,
                 height: `${JOYSTICK_SIZE}px`,

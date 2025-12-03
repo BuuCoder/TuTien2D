@@ -84,84 +84,38 @@ const CombatUI = () => {
 
     return (
         <>
-            {/* HP and Mana Bars - Top */}
-            <div style={{
-                position: 'fixed',
-                top: '10px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 1000,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                backgroundColor: 'rgba(0,0,0,0.7)',
-                padding: isMobile ? '6px 10px' : '8px 12px',
-                borderRadius: '8px',
-            }}>
-                {/* HP Bar */}
-                <div>
-                    <div style={{ fontSize: '9px', color: 'white', marginBottom: '2px' }}>
-                        HP: {playerStats.currentHp}/{playerStats.maxHp}
-                    </div>
-                    <div style={{
-                        width: isMobile ? '180px' : '250px',
-                        height: '12px',
-                        backgroundColor: 'rgba(255,0,0,0.3)',
-                        borderRadius: '6px',
-                        overflow: 'hidden',
-                        border: '1px solid rgba(255,255,255,0.3)',
-                    }}>
-                        <div style={{
-                            width: `${(playerStats.currentHp / playerStats.maxHp) * 100}%`,
-                            height: '100%',
-                            backgroundColor: '#e74c3c',
-                            transition: 'width 0.3s',
-                        }} />
-                    </div>
+            {/* Active Effects - Top Center */}
+            {activeEffects.length > 0 && (
+                <div style={{
+                    position: 'fixed',
+                    top: '10px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 1000,
+                    display: 'flex',
+                    gap: '6px',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                }}>
+                    {activeEffects.map((effect, i) => (
+                        <div key={i} style={{
+                            padding: '4px 8px',
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            borderRadius: '6px',
+                            fontSize: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                        }}>
+                            {effect.type === 'stun' && '😵'}
+                            {effect.type === 'slow' && '🐌'}
+                            {effect.type === 'burn' && '🔥'}
+                            {effect.type === 'heal' && '💚'}
+                        </div>
+                    ))}
                 </div>
-
-                {/* Mana Bar */}
-                <div>
-                    <div style={{ fontSize: '9px', color: 'white', marginBottom: '2px' }}>
-                        Mana: {playerStats.mp}/{playerStats.maxMp}
-                    </div>
-                    <div style={{
-                        width: isMobile ? '180px' : '250px',
-                        height: '10px',
-                        backgroundColor: 'rgba(0,0,255,0.3)',
-                        borderRadius: '5px',
-                        overflow: 'hidden',
-                        border: '1px solid rgba(255,255,255,0.3)',
-                    }}>
-                        <div style={{
-                            width: `${(playerStats.mp / playerStats.maxMp) * 100}%`,
-                            height: '100%',
-                            backgroundColor: '#3498db',
-                            transition: 'width 0.3s',
-                        }} />
-                    </div>
-                </div>
-
-                {/* Active Effects */}
-                {activeEffects.length > 0 && (
-                    <div style={{ display: 'flex', gap: '4px', marginTop: '4px', justifyContent: 'center' }}>
-                        {activeEffects.map((effect, i) => (
-                            <div key={i} style={{
-                                padding: '2px 6px',
-                                backgroundColor: 'rgba(255,255,255,0.2)',
-                                borderRadius: '3px',
-                                fontSize: '8px',
-                                color: 'white',
-                            }}>
-                                {effect.type === 'stun' && '😵'}
-                                {effect.type === 'slow' && '🐌'}
-                                {effect.type === 'burn' && '🔥'}
-                                {effect.type === 'heal' && '💚'}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+            )}
 
             {/* Skill Bar - Bottom (always visible) */}
             <div style={{

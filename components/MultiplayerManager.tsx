@@ -22,7 +22,6 @@ const MultiplayerManager = () => {
     } = useGameStore();
 
     const [isConnected, setIsConnected] = useState(false);
-    const [isOpen, setIsOpen] = useState(false); // Mặc định đóng
 
     // Hàm join channel sử dụng socket instance được truyền vào
     // để tránh lỗi stale closure
@@ -251,139 +250,7 @@ const MultiplayerManager = () => {
         });
     }, [playerPosition, playerDirection, playerAction, currentMapId, socket, isConnected, currentChannel]);
 
-    const handleManualJoin = (channelId: number) => {
-        if (socket) {
-            joinChannelWithSocket(socket, channelId);
-        }
-    };
-
-    return (
-        <>
-            {/* Toggle Button */}
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                style={{
-                    position: 'fixed',
-                    top: '15px',
-                    right: '15px',
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'white',
-                    cursor: 'pointer',
-                    zIndex: 10001,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '20px',
-                    backdropFilter: 'blur(4px)',
-                    transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.85)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.7)';
-                }}
-            >
-                {isOpen ? '✕' : '☰'}
-            </button>
-
-            {/* Panel */}
-            {isOpen && (
-                <div style={{
-                    position: 'fixed',
-                    top: '65px',
-                    right: '15px',
-                    backgroundColor: 'rgba(0,0,0,0.85)',
-                    padding: '15px',
-                    borderRadius: '12px',
-                    color: 'white',
-                    zIndex: 10000,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
-                    minWidth: '220px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    backdropFilter: 'blur(8px)',
-                    animation: 'slideIn 0.2s ease-out',
-                }}>
-                    <style jsx>{`
-                        @keyframes slideIn {
-                            from {
-                                opacity: 0;
-                                transform: translateY(-10px);
-                            }
-                            to {
-                                opacity: 1;
-                                transform: translateY(0);
-                            }
-                        }
-                    `}</style>
-
-                    <div style={{
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        borderBottom: '1px solid rgba(255,255,255,0.1)',
-                        paddingBottom: '8px'
-                    }}>
-                        <div style={{
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '50%',
-                            backgroundColor: isConnected ? '#4CAF50' : '#f44336',
-                            boxShadow: isConnected ? '0 0 8px #4CAF50' : 'none'
-                        }} />
-                        {isConnected ? 'Đã kết nối' : 'Mất kết nối'}
-                    </div>
-
-                    <div style={{ fontSize: '12px' }}>
-                        <span style={{ color: '#aaa' }}>Trạng thái: </span>
-                        <span style={{ color: currentChannel ? '#4CAF50' : '#ff9800' }}>
-                            {currentChannel ? `Kênh ${currentChannel}` : 'Chưa vào kênh'}
-                        </span>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        {[1, 2, 3].map(channel => (
-                            <button
-                                key={channel}
-                                onClick={() => handleManualJoin(channel)}
-                                disabled={!isConnected || currentChannel === channel}
-                                style={{
-                                    flex: 1,
-                                    padding: '8px 4px',
-                                    backgroundColor: currentChannel === channel ? '#4CAF50' : 'rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    borderRadius: '6px',
-                                    color: 'white',
-                                    cursor: (!isConnected || currentChannel === channel) ? 'default' : 'pointer',
-                                    fontSize: '11px',
-                                    transition: 'all 0.2s',
-                                    opacity: (!isConnected) ? 0.5 : 1,
-                                    fontWeight: currentChannel === channel ? 'bold' : 'normal'
-                                }}
-                            >
-                                {channel}
-                            </button>
-                        ))}
-                    </div>
-
-                    {!isConnected && (
-                        <div style={{ fontSize: '10px', color: '#f44336', marginTop: '2px' }}>
-                            Không thể kết nối máy chủ
-                        </div>
-                    )}
-                </div>
-            )}
-        </>
-    );
+    return null;
 };
 
 export default MultiplayerManager;
