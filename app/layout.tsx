@@ -34,6 +34,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="format-detection" content="telephone=no" />
         <script src="/mobile-fullscreen.js" defer></script>
+        <script src="/register-sw.js" defer></script>
       </head>
       <body className={inter.variable} suppressHydrationWarning>
         {children}
