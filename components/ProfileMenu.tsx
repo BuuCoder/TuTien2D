@@ -811,26 +811,7 @@ const ProfileMenu = () => {
                                     Hãy mua trang phục từ NPC Thợ May!
                                 </div>
                             </div>
-                        )}
-
-                        {/* Close Button */}
-                        <button
-                            onClick={() => setShowSkinSelector(false)}
-                            style={{
-                                width: '100%',
-                                marginTop: '16px',
-                                padding: '12px',
-                                backgroundColor: '#374151',
-                                color: '#F9FAFB',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Đóng
-                        </button>
+                        )} 
                     </div>
                 </div>
             )}

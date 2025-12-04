@@ -233,34 +233,30 @@ const MenuPopup = () => {
                 position: 'fixed',
                 top: 0,
                 left: 0,
-                width: '100vw',
-                height: '100vh',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(8px)',
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                backdropFilter: 'blur(4px)',
                 display: 'flex',
-                alignItems: 'center',
                 justifyContent: 'center',
+                alignItems: 'center',
                 zIndex: 10001,
-                animation: 'fadeIn 0.2s ease-out',
+                padding: '20px'
             }}
             onClick={handleClose}
         >
             <div
                 className="menu-popup-content"
                 style={{
-                    backgroundColor: 'rgba(17, 17, 17, 0.98)',
-                    backdropFilter: 'blur(20px)',
-                    borderRadius: '12px',
-                    padding: '0',
-                    maxWidth: '480px',
-                    width: '90%',
+                    backgroundColor: '#1F2937',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    maxWidth: '800px',
+                    width: '100%',
                     maxHeight: '80vh',
-                    overflow: 'hidden',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
-                    position: 'relative',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    display: 'flex',
-                    flexDirection: 'column',
+                    overflow: 'auto',
+                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -303,7 +299,7 @@ const MenuPopup = () => {
                             border-radius: 8px !important;
                         }
                         .menu-title {
-                            font-size: 13px !important;
+                            font-size: 16px !important;
                             margin-bottom: 4px !important;
                         }
                         .menu-popup-content h2 {
@@ -312,7 +308,7 @@ const MenuPopup = () => {
                         }
                         .menu-popup-content button {
                             padding: 5px 10px !important;
-                            font-size: 11px !important;
+                            font-size: 14px !important;
                         }
                         .menu-item {
                             padding: 6px !important;
@@ -323,7 +319,7 @@ const MenuPopup = () => {
                             font-size: 20px !important;
                         }
                         .menu-item-text {
-                            font-size: 11px !important;
+                            font-size: 14px !important;
                             line-height: 1.2 !important;
                             margin-bottom: 2px !important;
                         }
@@ -337,13 +333,13 @@ const MenuPopup = () => {
                         .close-button {
                             width: 24px !important;
                             height: 24px !important;
-                            font-size: 16px !important;
+                            font-size: 22px !important;
                             top: 6px !important;
                             right: 6px !important;
                         }
                         .back-button {
                             padding: 5px 10px !important;
-                            font-size: 11px !important;
+                            font-size: 12px !important;
                             margin-bottom: 6px !important;
                         }
                     }
@@ -355,16 +351,16 @@ const MenuPopup = () => {
                             max-height: 98vh !important;
                         }
                         .menu-title {
-                            font-size: 12px !important;
+                            font-size: 16px !important;
                             margin-bottom: 3px !important;
                         }
                         .menu-popup-content h2 {
-                            font-size: 12px !important;
+                            font-size: 14px !important;
                             margin-bottom: 3px !important;
                         }
                         .menu-popup-content button {
                             padding: 4px 8px !important;
-                            font-size: 10px !important;
+                            font-size: 20px !important;
                         }
                         .menu-item {
                             padding: 4px !important;
@@ -380,102 +376,101 @@ const MenuPopup = () => {
                             font-size: 9px !important;
                         }
                         .close-button {
-                            width: 20px !important;
-                            height: 20px !important;
-                            font-size: 14px !important;
+                            width: 30px !important;
+                            height: 30px !important;
+                            font-size: 20px !important;
                         }
                     }
                 `}</style>
                 {/* Header */}
                 <div style={{
-                    padding: '16px 20px',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                     display: 'flex',
-                    alignItems: 'center',
                     justifyContent: 'space-between',
-                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                    alignItems: 'center',
+                    marginBottom: '20px'
                 }}>
-                    <h2 className="menu-title" style={{
-                        margin: 0,
-                        color: '#f9fafb',
-                        fontSize: '18px',
-                        fontWeight: '600',
-                        letterSpacing: '-0.02em',
+                    <h3 className="menu-title" style={{
+                        color: '#F9FAFB',
+                        fontSize: '20px',
+                        fontWeight: 'bold',
+                        margin: 0
                     }}>
                         {!selectedCategory 
-                            ? (activeMenu.menu.length > 0 ? 'Menu' : 'Nhiệm vụ')
-                            : selectedCategoryData?.name
+                            ? (activeMenu.menu.length > 0 ? '📜 Menu' : '📜 Nhiệm vụ')
+                            : `📦 ${selectedCategoryData?.name}`
                         }
-                    </h2>
+                    </h3>
                     <button
                         onClick={handleClose}
                         className="close-button"
                         style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '6px',
-                            border: '1px solid rgba(255, 255, 255, 0.08)',
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            color: '#ef4444',
-                            fontSize: '18px',
+                            background: 'none',
+                            border: 'none',
+                            color: '#9CA3AF',
+                            fontSize: '24px',
                             cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: '600',
-                            transition: 'all 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+                            padding: '0 8px'
                         }}
                     >
                         ×
                     </button>
                 </div>
 
-                {/* Content */}
+                {/* Gold Display */}
                 <div style={{
-                    flex: 1,
-                    overflow: 'auto',
-                    padding: '20px',
+                    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    marginBottom: '20px',
+                    textAlign: 'center',
+                    border: '1px solid rgba(251, 191, 36, 0.2)'
                 }}>
+                    <span style={{
+                        color: '#FBBF24',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                    }}>
+                        💰 Vàng: {(user?.gold || 0).toLocaleString()}
+                    </span>
+                </div>
+
+                {/* Content */}
+                <div>
                 {!selectedCategory ? (
                     <>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {activeMenu.menu.length > 0 ? activeMenu.menu.map((category) => (
                                 <button
                                     key={category.id}
                                     onClick={() => setSelectedCategory(category.id)}
                                     style={{
-                                        padding: '12px 16px',
-                                        background: 'rgba(255, 255, 255, 0.04)',
-                                        color: '#f9fafb',
-                                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                                        borderRadius: '6px',
-                                        fontSize: '14px',
+                                        padding: '16px 20px',
+                                        background: 'rgba(255, 255, 255, 0.05)',
+                                        color: '#F9FAFB',
+                                        border: '2px solid rgba(255, 255, 255, 0.1)',
+                                        borderRadius: '12px',
+                                        fontSize: '16px',
                                         fontWeight: '600',
                                         cursor: 'pointer',
-                                        transition: 'all 0.15s ease',
-                                        letterSpacing: '-0.01em',
+                                        transition: 'all 0.2s ease',
                                         textAlign: 'left',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                                        e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)';
+                                        e.currentTarget.style.borderColor = '#3B82F6';
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                        e.currentTarget.style.transform = 'translateY(0)';
                                     }}
                                 >
-                                    <span>{category.name}</span>
-                                    <span style={{ color: '#9ca3af', fontSize: '16px' }}>›</span>
+                                    <span style={{ fontSize: "14px"}}>{category.name}</span>
+                                    <span style={{ color: '#9CA3AF', fontSize: '20px' }}>›</span>
                                 </button>
                             )) : activeMenu.quests?.map((quest) => (
                                 <div
@@ -500,32 +495,31 @@ const MenuPopup = () => {
                                     <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
                                         <span className="menu-item-icon quest-icon" style={{ fontSize: '36px', flexShrink: 0 }}>{quest.image}</span>
                                         <div style={{ flex: 1 }}>
-                                            <div className="menu-item-text" style={{ fontWeight: '600', color: '#f9fafb', fontSize: '15px', marginBottom: '4px', letterSpacing: '-0.01em' }}>
+                                            <div className="menu-item-text" style={{ fontWeight: '600', color: '#F9FAFB', fontSize: '13px', marginBottom: '4px' }}>
                                                 {quest.name}
                                             </div>
-                                            <div className="menu-item-text menu-item-description" style={{ color: '#9ca3af', fontSize: '12px', lineHeight: '1.5' }}>
+                                            <div className="menu-item-text menu-item-description" style={{ color: '#9CA3AF', fontSize: '11px', lineHeight: '1.5' }}>
                                                 {quest.description}
                                             </div>
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div className="menu-item-price" style={{ color: '#fbbf24', fontSize: '13px', fontWeight: '600', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <div className="menu-item-price" style={{ color: '#FBBF24', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <span style={{ fontSize: '14px' }}>🏆</span>
                                             {quest.reward} vàng
                                         </div>
                                         <button
                                             onClick={() => handleBuyItem({ ...quest, price: 0 })}
                                             style={{
-                                                padding: '8px 14px',
+                                                padding: '8px 12px',
                                                 background: 'linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(249, 115, 22, 0.2) 100%)',
-                                                color: '#fb923c',
+                                                color: '#FB923C',
                                                 border: '1px solid rgba(251, 146, 60, 0.3)',
                                                 borderRadius: '6px',
                                                 cursor: 'pointer',
                                                 fontWeight: '600',
-                                                fontSize: '12px',
-                                                transition: 'all 0.15s ease',
-                                                letterSpacing: '-0.01em'
+                                                fontSize: '14px',
+                                                transition: 'all 0.2s ease'
                                             }}
                                             onMouseEnter={(e) => {
                                                 e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 146, 60, 0.3) 0%, rgba(249, 115, 22, 0.3) 100%)';
@@ -547,32 +541,31 @@ const MenuPopup = () => {
                             onClick={() => setSelectedCategory(null)}
                             className="back-button"
                             style={{
-                                marginBottom: '12px',
-                                padding: '8px 12px',
-                                background: 'rgba(255, 255, 255, 0.04)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
-                                borderRadius: '6px',
+                                marginBottom: '16px',
+                                padding: '10px 16px',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '8px',
                                 cursor: 'pointer',
-                                fontSize: '12px',
+                                fontSize: '14px!important',
                                 fontWeight: '600',
-                                color: '#9ca3af',
-                                transition: 'all 0.15s ease',
-                                letterSpacing: '-0.01em',
+                                color: '#9CA3AF',
+                                transition: 'all 0.2s ease',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '4px'
+                                gap: '6px'
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
-                                e.currentTarget.style.color = '#f9fafb';
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.color = '#F9FAFB';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                                e.currentTarget.style.color = '#9ca3af';
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                e.currentTarget.style.color = '#9CA3AF';
                             }}
                         >
-                            <span style={{ fontSize: '14px' }}>←</span>
-                            Quay lại
+                            <span style={{ fontSize: '16px' }}>←</span>
+                            <span style={{ fontSize: '14px' }}>Quay lại</span>
                         </button>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {selectedCategoryData?.items.map((item) => {
@@ -608,16 +601,16 @@ const MenuPopup = () => {
                                             e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                            <span className="menu-item-icon item-icon" style={{ fontSize: '28px', flexShrink: 0 }}>{item.image}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                                            <span className="menu-item-icon item-icon" style={{ fontSize: '36px', flexShrink: 0 }}>{item.image}</span>
                                             <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontWeight: '600', color: '#f9fafb', fontSize: '14px', letterSpacing: '-0.01em', marginBottom: '2px' }}>
+                                                <div style={{ fontWeight: '600', color: '#F9FAFB', fontSize: '13px', marginBottom: '4px' }}>
                                                     {item.name}
-                                                    {isOwned && <span style={{ marginLeft: '6px', color: '#10B981', fontSize: '12px' }}>✓ Đã sở hữu</span>}
+                                                    {isOwned && <span style={{ marginLeft: '6px', color: '#10B981', fontSize: '11px' }}>✓ Đã sở hữu</span>}
                                                 </div>
-                                                <div style={{ color: !canAfford && !isOwned ? '#EF4444' : '#fbbf24', fontSize: '12px', fontWeight: '600', letterSpacing: '-0.01em' }}>
+                                                <div style={{ color: !canAfford && !isOwned ? '#EF4444' : '#FBBF24', fontSize: '11px', fontWeight: '600' }}>
                                                     {item.price > 0 ? `💰 ${item.price.toLocaleString()}` : '🎁 Miễn phí'}
-                                                    {!canAfford && !isOwned && <span style={{ marginLeft: '6px' }}>(Thiếu {(item.price - (user?.gold || 0)).toLocaleString()})</span>}
+                                                    {!canAfford && !isOwned && <span style={{ marginLeft: '6px', fontSize: '10px' }}>(Thiếu {(item.price - (user?.gold || 0)).toLocaleString()})</span>}
                                                 </div>
                                             </div>
                                         </div>
@@ -626,18 +619,17 @@ const MenuPopup = () => {
                                             disabled={isDisabled}
                                             title={isOwned ? 'Đã sở hữu' : !canAfford ? 'Không đủ vàng' : ''}
                                             style={{
-                                                padding: '8px 14px',
+                                                padding: '8px 12px',
                                                 background: isDisabled 
                                                     ? 'rgba(107, 114, 128, 0.2)' 
                                                     : 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%)',
-                                                color: isDisabled ? '#9CA3AF' : '#60a5fa',
+                                                color: isDisabled ? '#9CA3AF' : '#60fa9eff',
                                                 border: `1px solid ${isDisabled ? 'rgba(107, 114, 128, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
                                                 borderRadius: '6px',
                                                 cursor: isDisabled ? 'not-allowed' : 'pointer',
                                                 fontWeight: '600',
-                                                fontSize: '12px',
-                                                transition: 'all 0.15s ease',
-                                                letterSpacing: '-0.01em',
+                                                fontSize: '11px',
+                                                transition: 'all 0.2s ease',
                                                 flexShrink: 0,
                                                 whiteSpace: 'nowrap',
                                                 opacity: isDisabled ? 0.5 : 1
@@ -653,7 +645,7 @@ const MenuPopup = () => {
                                                 }
                                             }}
                                         >
-                                            {isOwned ? 'Đã có' : item.price > 0 ? 'Mua' : 'Nhận'}
+                                            <span style={{ fontSize: "14px" }}>{isOwned ? 'Đã có' : item.price > 0 ? 'Mua' : 'Nhận'}</span>
                                         </button>
                                     </div>
                                 );
