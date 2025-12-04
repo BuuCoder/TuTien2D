@@ -5,8 +5,14 @@ import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 import { SKINS } from '@/lib/skinData';
 
 export async function POST(req: Request) {
+    let userId: number | undefined;
+    let skinId: string | undefined;
+    
     try {
-        const { userId, sessionId, token, skinId } = await parseRequestBody(req);
+        const body = await parseRequestBody(req);
+        userId = body.userId;
+        skinId = body.skinId;
+        const { sessionId, token } = body;
 
         // Validate required fields
         if (!userId || !sessionId || !token || !skinId) {
@@ -52,12 +58,12 @@ export async function POST(req: Request) {
         }
 
         // Check if user already owns this skin
-        const [existingSkin] = await db.query(
+        const [existingSkinRows] = await db.query(
             'SELECT * FROM user_skin WHERE user_id = ? AND skin_id = ?',
             [userId, skinId]
-        );
+        ) as any[];
 
-        if (existingSkin.length > 0) {
+        if (existingSkinRows.length > 0) {
             return NextResponse.json(
                 { error: 'Bạn đã sở hữu trang phục này!' },
                 { status: 400 }
@@ -65,19 +71,19 @@ export async function POST(req: Request) {
         }
 
         // Get user's gold
-        const [inventory] = await db.query(
+        const [inventoryRows] = await db.query(
             'SELECT gold FROM user_inventory WHERE user_id = ?',
             [userId]
-        );
+        ) as any[];
 
-        if (inventory.length === 0) {
+        if (inventoryRows.length === 0) {
             return NextResponse.json(
                 { error: 'Không tìm thấy thông tin người chơi' },
                 { status: 404 }
             );
         }
 
-        const currentGold = inventory[0].gold;
+        const currentGold = inventoryRows[0].gold;
 
         // Check if user has enough gold
         if (currentGold < skin.price) {
@@ -96,10 +102,10 @@ export async function POST(req: Request) {
             const [updateResult] = await connection.query(
                 'UPDATE user_inventory SET gold = gold - ? WHERE user_id = ? AND gold >= ?',
                 [skin.price, userId, skin.price]
-            );
+            ) as any[];
 
             // Check if update was successful (gold was sufficient)
-            if (updateResult.affectedRows === 0) {
+            if ((updateResult as any).affectedRows === 0) {
                 await connection.rollback();
                 return NextResponse.json(
                     { error: 'Không đủ vàng hoặc giao dịch thất bại' },
@@ -117,17 +123,17 @@ export async function POST(req: Request) {
             await connection.commit();
 
             // Get updated gold
-            const [updatedInventory] = await connection.query(
+            const [updatedInventoryRows] = await connection.query(
                 'SELECT gold FROM user_inventory WHERE user_id = ?',
                 [userId]
-            );
+            ) as any[];
 
             connection.release();
 
             return NextResponse.json({
                 success: true,
                 message: `Đã mua trang phục ${skin.name}!`,
-                gold: updatedInventory[0].gold,
+                gold: updatedInventoryRows[0].gold,
                 skinId: skinId
             });
 

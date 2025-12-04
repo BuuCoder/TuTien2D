@@ -38,20 +38,20 @@ export async function POST(req: Request) {
         const allSkins = getAllSkins();
 
         // Get user's owned skins
-        const [ownedSkins] = await db.query(
+        const [ownedSkinRows] = await db.query(
             'SELECT skin_id FROM user_skin WHERE user_id = ?',
             [userId]
-        );
+        ) as any[];
 
-        const ownedSkinIds = ownedSkins.map((s: any) => s.skin_id);
+        const ownedSkinIds = ownedSkinRows.map((s: any) => s.skin_id);
 
         // Get user's current equipped skin
-        const [user] = await db.query(
+        const [userRows] = await db.query(
             'SELECT skin FROM users WHERE id = ?',
             [userId]
-        );
+        ) as any[];
 
-        const currentSkin = user[0]?.skin || 'knight';
+        const currentSkin = userRows[0]?.skin || 'knight';
 
         // Map skins with ownership status
         const skinsWithStatus = allSkins.map(skin => ({

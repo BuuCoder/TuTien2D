@@ -39,6 +39,8 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
     }, []);
 
     const loadSkins = async () => {
+        if (!user) return;
+        
         try {
             const response = await sendObfuscatedRequest('/api/skin/list', {
                 userId: user.id,
@@ -46,8 +48,10 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
                 token: user.socketToken
             });
 
-            if (response.success) {
-                setSkins(response.skins);
+            const data = await response.json();
+
+            if (data.success) {
+                setSkins(data.skins);
             }
         } catch (error) {
             console.error('Error loading skins:', error);
@@ -57,7 +61,7 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
     };
 
     const handleBuySkinClick = (skin: SkinData) => {
-        if (actionLoading) return;
+        if (actionLoading || !user) return;
 
         // Validation: Check if user already owns this skin
         if (skin.owned) {
@@ -78,7 +82,7 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
 
     const handleConfirmBuy = async () => {
         const skin = confirmDialog.skin;
-        if (!skin) return;
+        if (!skin || !user) return;
 
         setConfirmDialog({ isOpen: false, skin: null });
         setActionLoading(true);
@@ -90,16 +94,18 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
                 skinId: skin.id
             });
 
-            if (response.success) {
+            const data = await response.json();
+
+            if (data.success) {
                 // Update user gold
-                setUser({ ...user, gold: response.gold });
+                setUser({ ...user, gold: data.gold });
                 
                 // Reload skins
                 await loadSkins();
                 
-                alert(response.message);
+                alert(data.message);
             } else {
-                alert(response.error || 'Không thể mua trang phục');
+                alert(data.error || 'Không thể mua trang phục');
             }
         } catch (error: any) {
             alert(error.message || 'Lỗi khi mua trang phục');
@@ -109,7 +115,7 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
     };
 
     const handleEquipSkin = async (skin: SkinData) => {
-        if (actionLoading) return;
+        if (actionLoading || !user) return;
 
         setActionLoading(true);
         try {
@@ -120,16 +126,18 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
                 skinId: skin.id
             });
 
-            if (response.success) {
+            const data = await response.json();
+
+            if (data.success) {
                 // Update user skin
                 setUser({ ...user, skin: skin.id });
                 
                 // Reload skins
                 await loadSkins();
                 
-                alert(response.message);
+                alert(data.message);
             } else {
-                alert(response.error || 'Không thể trang bị');
+                alert(data.error || 'Không thể trang bị');
             }
         } catch (error: any) {
             alert(error.message || 'Lỗi khi trang bị');
@@ -206,7 +214,7 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
                         fontSize: '18px',
                         fontWeight: 'bold'
                     }}>
-                        💰 Vàng: {user.gold?.toLocaleString() || 0}
+                        💰 Vàng: {(user?.gold || 0).toLocaleString()}
                     </span>
                 </div>
 
@@ -338,39 +346,39 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
                                                 e.stopPropagation();
                                                 handleBuySkinClick(skin);
                                             }}
-                                            disabled={actionLoading || skin.price > (user.gold || 0)}
-                                            title={skin.price > (user.gold || 0) 
+                                            disabled={actionLoading || skin.price > (user?.gold || 0)}
+                                            title={skin.price > (user?.gold || 0) 
                                                 ? `Không đủ vàng! Cần ${skin.price.toLocaleString()} vàng` 
                                                 : `Mua ${skin.name}`}
                                             style={{
                                                 width: '100%',
-                                                backgroundColor: skin.price > (user.gold || 0) 
+                                                backgroundColor: skin.price > (user?.gold || 0) 
                                                     ? '#6B7280' 
                                                     : '#10B981',
                                                 color: '#fff',
                                                 border: 'none',
                                                 padding: '8px',
                                                 borderRadius: '6px',
-                                                cursor: (actionLoading || skin.price > (user.gold || 0)) 
+                                                cursor: (actionLoading || skin.price > (user?.gold || 0)) 
                                                     ? 'not-allowed' 
                                                     : 'pointer',
                                                 fontSize: '14px',
                                                 fontWeight: 'bold',
-                                                opacity: (actionLoading || skin.price > (user.gold || 0)) 
+                                                opacity: (actionLoading || skin.price > (user?.gold || 0)) 
                                                     ? 0.5 
                                                     : 1
                                             }}
                                         >
                                             💰 {skin.price.toLocaleString()}
                                         </button>
-                                        {skin.price > (user.gold || 0) && (
+                                        {skin.price > (user?.gold || 0) && (
                                             <div style={{
                                                 marginTop: '4px',
                                                 fontSize: '11px',
                                                 color: '#EF4444',
                                                 textAlign: 'center'
                                             }}>
-                                                Thiếu {(skin.price - (user.gold || 0)).toLocaleString()} vàng
+                                                Thiếu {(skin.price - (user?.gold || 0)).toLocaleString()} vàng
                                             </div>
                                         )}
                                     </>
@@ -407,8 +415,8 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
                 message={`Bạn có chắc muốn mua "${confirmDialog.skin?.name}" không?`}
                 details={confirmDialog.skin ? [
                     `💰 Giá: ${confirmDialog.skin.price.toLocaleString()} vàng`,
-                    `💵 Số vàng hiện tại: ${(user.gold || 0).toLocaleString()}`,
-                    `💸 Số vàng sau khi mua: ${((user.gold || 0) - confirmDialog.skin.price).toLocaleString()}`
+                    `💵 Số vàng hiện tại: ${(user?.gold || 0).toLocaleString()}`,
+                    `💸 Số vàng sau khi mua: ${((user?.gold || 0) - confirmDialog.skin.price).toLocaleString()}`
                 ] : []}
                 confirmText="Mua ngay"
                 cancelText="Hủy"

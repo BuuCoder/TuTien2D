@@ -44,12 +44,12 @@ export async function POST(req: Request) {
         }
 
         // Check if user owns this skin
-        const [ownedSkin] = await db.query(
+        const [ownedSkinRows] = await db.query(
             'SELECT * FROM user_skin WHERE user_id = ? AND skin_id = ?',
             [userId, skinId]
-        );
+        ) as any[];
 
-        if (ownedSkin.length === 0) {
+        if (ownedSkinRows.length === 0) {
             return NextResponse.json(
                 { error: 'Bạn chưa sở hữu trang phục này!' },
                 { status: 400 }
@@ -60,10 +60,10 @@ export async function POST(req: Request) {
         const [updateResult] = await db.query(
             'UPDATE users SET skin = ? WHERE id = ? AND EXISTS (SELECT 1 FROM user_skin WHERE user_id = ? AND skin_id = ?)',
             [skinId, userId, userId, skinId]
-        );
+        ) as any[];
 
         // Verify update was successful
-        if (updateResult.affectedRows === 0) {
+        if ((updateResult as any).affectedRows === 0) {
             console.warn(`[Security] User ${userId} tried to equip unowned skin ${skinId}`);
             return NextResponse.json(
                 { error: 'Không thể trang bị skin này' },

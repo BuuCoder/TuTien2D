@@ -31,11 +31,13 @@ const MenuPopup = () => {
                     token: user.socketToken
                 });
 
-                if (response.success) {
-                    const owned = new Set(
-                        response.skins
+                const data = await response.json();
+
+                if (data.success) {
+                    const owned = new Set<string>(
+                        data.skins
                             .filter((s: any) => s.owned)
-                            .map((s: any) => s.id)
+                            .map((s: any) => s.id as string)
                     );
                     setOwnedSkins(owned);
                 }
