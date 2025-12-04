@@ -1,19 +1,90 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameStore } from '@/lib/store';
 import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
+import ConfirmDialog from './ConfirmDialog';
 
 const MenuPopup = () => {
     const { activeMenu, setActiveMenu, setNotification, user, setPlayerStats, playerStats } = useGameStore();
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [ownedSkins, setOwnedSkins] = useState<Set<string>>(new Set());
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        item: any;
+        skinId: string;
+    }>({ isOpen: false, item: null, skinId: '' });
 
+    // Load owned skins when menu opens with skin category
+    useEffect(() => {
+        const loadOwnedSkins = async () => {
+            if (!user || !activeMenu) return;
+            
+            // Check if menu has skin category
+            const hasSkinCategory = activeMenu.menu?.some(cat => cat.id === 'skins');
+            if (!hasSkinCategory) return;
+
+            try {
+                const response = await sendObfuscatedRequest('/api/skin/list', {
+                    userId: user.id,
+                    sessionId: user.sessionId,
+                    token: user.socketToken
+                });
+
+                if (response.success) {
+                    const owned = new Set(
+                        response.skins
+                            .filter((s: any) => s.owned)
+                            .map((s: any) => s.id)
+                    );
+                    setOwnedSkins(owned);
+                }
+            } catch (error) {
+                console.error('Error loading owned skins:', error);
+            }
+        };
+
+        loadOwnedSkins();
+    }, [activeMenu, user]);
+
+    // Early return AFTER all hooks
     if (!activeMenu) return null;
 
     const handleBuyItem = async (item: any) => {
         try {
             if (!user) {
                 setNotification({ message: 'Bạn chưa đăng nhập!', type: 'error' });
+                return;
+            }
+
+            // Kiểm tra nếu là skin
+            const isSkin = item.id.startsWith('skin-');
+            
+            if (isSkin) {
+                // Extract skin ID (remove 'skin-' prefix)
+                const skinId = item.id.replace('skin-', '');
+                
+                // Validation: Check if user already owns this skin
+                if (ownedSkins.has(skinId)) {
+                    setNotification({
+                        message: 'Bạn đã sở hữu trang phục này rồi!',
+                        type: 'error'
+                    });
+                    return;
+                }
+                
+                // Validation: Check if user has enough gold
+                const currentGold = user.gold || 0;
+                if (currentGold < item.price) {
+                    setNotification({
+                        message: `Không đủ vàng! Cần ${item.price.toLocaleString()} vàng nhưng chỉ có ${currentGold.toLocaleString()} vàng.`,
+                        type: 'error'
+                    });
+                    return;
+                }
+
+                // Show confirm dialog
+                setConfirmDialog({ isOpen: true, item, skinId });
                 return;
             }
 
@@ -104,6 +175,46 @@ const MenuPopup = () => {
         } catch (error) {
             console.error('Action failed', error);
             setNotification({ message: 'Lỗi khi thực hiện!', type: 'error' });
+        }
+    };
+
+    const handleConfirmBuySkin = async () => {
+        const { item, skinId } = confirmDialog;
+        if (!item || !user) return;
+
+        setConfirmDialog({ isOpen: false, item: null, skinId: '' });
+
+        try {
+            const response = await sendObfuscatedRequest('/api/skin/buy', {
+                userId: user.id,
+                sessionId: user.sessionId,
+                token: user.socketToken,
+                skinId: skinId
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Update user gold
+                useGameStore.setState({ 
+                    user: { ...user, gold: data.gold } 
+                });
+                
+                // Reload owned skins
+                setOwnedSkins(prev => new Set([...prev, skinId]));
+                
+                setNotification({ message: data.message, type: 'success' });
+            } else {
+                setNotification({
+                    message: data.error || 'Không thể mua trang phục!',
+                    type: 'error'
+                });
+            }
+        } catch (error: any) {
+            setNotification({
+                message: error.message || 'Lỗi khi mua trang phục!',
+                type: 'error'
+            });
         }
     };
 
@@ -462,72 +573,111 @@ const MenuPopup = () => {
                             Quay lại
                         </button>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {selectedCategoryData?.items.map((item) => (
-                                <div
-                                    key={item.id}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        padding: '12px',
-                                        background: 'rgba(255, 255, 255, 0.04)',
-                                        borderRadius: '8px',
-                                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                                        transition: 'all 0.15s ease',
-                                        gap: '12px'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
-                                        e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                                        <span className="menu-item-icon item-icon" style={{ fontSize: '28px', flexShrink: 0 }}>{item.image}</span>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontWeight: '600', color: '#f9fafb', fontSize: '14px', letterSpacing: '-0.01em', marginBottom: '2px' }}>
-                                                {item.name}
-                                            </div>
-                                            <div style={{ color: '#fbbf24', fontSize: '12px', fontWeight: '600', letterSpacing: '-0.01em' }}>
-                                                {item.price > 0 ? `💰 ${item.price}` : '🎁 Miễn phí'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleBuyItem(item)}
+                            {selectedCategoryData?.items.map((item) => {
+                                const isSkin = item.id.startsWith('skin-');
+                                const skinId = isSkin ? item.id.replace('skin-', '') : '';
+                                const isOwned = isSkin && ownedSkins.has(skinId);
+                                const canAfford = (user?.gold || 0) >= item.price;
+                                const isDisabled = isOwned || !canAfford;
+
+                                return (
+                                    <div
+                                        key={item.id}
                                         style={{
-                                            padding: '8px 14px',
-                                            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%)',
-                                            color: '#60a5fa',
-                                            border: '1px solid rgba(59, 130, 246, 0.3)',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            fontWeight: '600',
-                                            fontSize: '12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '12px',
+                                            background: 'rgba(255, 255, 255, 0.04)',
+                                            borderRadius: '8px',
+                                            border: '1px solid rgba(255, 255, 255, 0.08)',
                                             transition: 'all 0.15s ease',
-                                            letterSpacing: '-0.01em',
-                                            flexShrink: 0,
-                                            whiteSpace: 'nowrap'
+                                            gap: '12px',
+                                            opacity: isOwned ? 0.6 : 1
                                         }}
                                         onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.3) 100%)';
+                                            if (!isOwned) {
+                                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                                                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                                            }
                                         }}
                                         onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%)';
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
                                         }}
                                     >
-                                        {item.price > 0 ? 'Mua' : 'Nhận'}
-                                    </button>
-                                </div>
-                            ))}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                                            <span className="menu-item-icon item-icon" style={{ fontSize: '28px', flexShrink: 0 }}>{item.image}</span>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: '600', color: '#f9fafb', fontSize: '14px', letterSpacing: '-0.01em', marginBottom: '2px' }}>
+                                                    {item.name}
+                                                    {isOwned && <span style={{ marginLeft: '6px', color: '#10B981', fontSize: '12px' }}>✓ Đã sở hữu</span>}
+                                                </div>
+                                                <div style={{ color: !canAfford && !isOwned ? '#EF4444' : '#fbbf24', fontSize: '12px', fontWeight: '600', letterSpacing: '-0.01em' }}>
+                                                    {item.price > 0 ? `💰 ${item.price.toLocaleString()}` : '🎁 Miễn phí'}
+                                                    {!canAfford && !isOwned && <span style={{ marginLeft: '6px' }}>(Thiếu {(item.price - (user?.gold || 0)).toLocaleString()})</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleBuyItem(item)}
+                                            disabled={isDisabled}
+                                            title={isOwned ? 'Đã sở hữu' : !canAfford ? 'Không đủ vàng' : ''}
+                                            style={{
+                                                padding: '8px 14px',
+                                                background: isDisabled 
+                                                    ? 'rgba(107, 114, 128, 0.2)' 
+                                                    : 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%)',
+                                                color: isDisabled ? '#9CA3AF' : '#60a5fa',
+                                                border: `1px solid ${isDisabled ? 'rgba(107, 114, 128, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+                                                borderRadius: '6px',
+                                                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                                fontWeight: '600',
+                                                fontSize: '12px',
+                                                transition: 'all 0.15s ease',
+                                                letterSpacing: '-0.01em',
+                                                flexShrink: 0,
+                                                whiteSpace: 'nowrap',
+                                                opacity: isDisabled ? 0.5 : 1
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (!isDisabled) {
+                                                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.3) 100%)';
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!isDisabled) {
+                                                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%)';
+                                                }
+                                            }}
+                                        >
+                                            {isOwned ? 'Đã có' : item.price > 0 ? 'Mua' : 'Nhận'}
+                                        </button>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </>
                 )}
                 </div>
             </div>
+
+            {/* Confirm Dialog */}
+            <ConfirmDialog
+                isOpen={confirmDialog.isOpen}
+                title="Xác nhận mua trang phục"
+                message={`Bạn có chắc muốn mua "${confirmDialog.item?.name}" không?`}
+                details={confirmDialog.item && user ? [
+                    `💰 Giá: ${confirmDialog.item.price.toLocaleString()} vàng`,
+                    `💵 Số vàng hiện tại: ${(user.gold || 0).toLocaleString()}`,
+                    `💸 Số vàng sau khi mua: ${((user.gold || 0) - confirmDialog.item.price).toLocaleString()}`
+                ] : []}
+                confirmText="Mua ngay"
+                cancelText="Hủy"
+                confirmColor="#10B981"
+                onConfirm={handleConfirmBuySkin}
+                onCancel={() => setConfirmDialog({ isOpen: false, item: null, skinId: '' })}
+            />
         </div>
     );
 };

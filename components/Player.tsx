@@ -133,10 +133,13 @@ const Player = () => {
         };
     }, [playerPosition, setPlayerPosition, joystickDirection, targetPosition, setTargetPosition, setDirection, setPlayerAction, playerAction, currentMap.width, currentMap.height]);
 
+    // Get current skin from user data, default to 'knight'
+    const currentSkin = user?.skin || 'knight';
+
     // When idle, always use down_idle regardless of direction
     const gifPath = playerAction === 'idle'
-        ? `/assets/knight/idle/down_idle.gif`
-        : `/assets/knight/${playerAction}/${direction}_${playerAction}.gif`;
+        ? `/assets/${currentSkin}/idle/down_idle.gif`
+        : `/assets/${currentSkin}/${playerAction}/${direction}_${playerAction}.gif`;
 
     return (
         <div

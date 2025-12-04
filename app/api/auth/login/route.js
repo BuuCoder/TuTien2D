@@ -64,7 +64,8 @@ export async function POST(req) {
             user: {
                 id: user.id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                skin: user.skin || 'knight'
             },
             sessionId,
             socketToken, // Token mã hóa cho socket

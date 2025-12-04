@@ -59,6 +59,7 @@ interface User {
   socketToken: string; // JWT token cho socket authentication
   gold: number;
   level: number;
+  skin?: string; // Current equipped skin
 }
 
 interface PlayerStats {

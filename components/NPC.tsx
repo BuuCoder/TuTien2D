@@ -18,6 +18,7 @@ const NPC_SPRITES: Record<string, string> = {
     'healer': '/assets/npc/healer/down_idle.gif',
     'village-elder': '/assets/npc/village/down_idle.gif',
     'guard': '/assets/npc/village/down_idle.gif',
+    'skin-merchant': '/assets/npc/business/down_idle.gif',
 };
 
 const NPC_NAMES: Record<string, string> = {
@@ -25,6 +26,7 @@ const NPC_NAMES: Record<string, string> = {
     'healer': 'Y Sư',
     'village-elder': 'Trưởng Làng',
     'guard': 'Lính Canh',
+    'skin-merchant': 'Thợ May',
 };
 
 const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {

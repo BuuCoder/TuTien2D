@@ -9,6 +9,10 @@ const ProfileMenu = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [showSkinSelector, setShowSkinSelector] = useState(false);
+    const [skins, setSkins] = useState<any[]>([]);
+    const [loadingSkins, setLoadingSkins] = useState(false);
+    const [equippingSkin, setEquippingSkin] = useState(false);
 
     React.useEffect(() => {
         const checkMobile = () => {
@@ -20,6 +24,92 @@ const ProfileMenu = () => {
     }, []);
 
     if (!user) return null;
+
+    const loadSkins = async () => {
+        if (!user) return;
+        
+        setLoadingSkins(true);
+        try {
+            const response = await sendObfuscatedRequest('/api/skin/list', {
+                userId: user.id,
+                sessionId: user.sessionId,
+                token: user.socketToken
+            });
+
+            const data = await response.json();
+            console.log('[ProfileMenu] Skin list response:', data);
+
+            if (data.success) {
+                // Chỉ lấy skin đã sở hữu
+                const ownedSkins = data.skins.filter((s: any) => s.owned);
+                console.log('[ProfileMenu] Owned skins:', ownedSkins);
+                setSkins(ownedSkins);
+            } else {
+                console.error('[ProfileMenu] Failed to load skins:', data.error);
+                setNotification({
+                    message: data.error || 'Không thể tải danh sách trang phục',
+                    type: 'error'
+                });
+            }
+        } catch (error) {
+            console.error('[ProfileMenu] Error loading skins:', error);
+            setNotification({
+                message: 'Không thể tải danh sách trang phục',
+                type: 'error'
+            });
+        } finally {
+            setLoadingSkins(false);
+        }
+    };
+
+    const handleOpenSkinSelector = () => {
+        setIsMenuOpen(false);
+        setShowSkinSelector(true);
+        loadSkins();
+    };
+
+    const handleEquipSkin = async (skinId: string) => {
+        if (equippingSkin || !user) return;
+
+        setEquippingSkin(true);
+        try {
+            const response = await sendObfuscatedRequest('/api/skin/equip', {
+                userId: user.id,
+                sessionId: user.sessionId,
+                token: user.socketToken,
+                skinId: skinId
+            });
+
+            const data = await response.json();
+            console.log('[ProfileMenu] Equip skin response:', data);
+
+            if (data.success) {
+                // Update user skin
+                setUser({ ...user, skin: skinId });
+                
+                // Reload skins to update equipped status
+                await loadSkins();
+                
+                setNotification({
+                    message: data.message,
+                    type: 'success'
+                });
+            } else {
+                setNotification({
+                    message: data.error || 'Không thể trang bị',
+                    type: 'error'
+                });
+            }
+        } catch (error: any) {
+            console.error('[ProfileMenu] Error equipping skin:', error);
+            setNotification({
+                message: error.message || 'Lỗi khi trang bị',
+                type: 'error'
+            });
+        } finally {
+            setEquippingSkin(false);
+        }
+    };
 
     const handleLogout = async () => {
         if (isLoggingOut) return;
@@ -264,6 +354,36 @@ const ProfileMenu = () => {
                     }}
                 >
                     <button
+                        onClick={handleOpenSkinSelector}
+                        style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            backgroundColor: 'transparent',
+                            color: '#3b82f6',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            fontWeight: '500',
+                            textAlign: 'left',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'background-color 0.15s ease',
+                            letterSpacing: '-0.01em',
+                            marginBottom: '4px'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                    >
+                        👔 Trang Phục
+                    </button>
+                    
+                    <button
                         onClick={handleLogout}
                         disabled={isLoggingOut}
                         style={{
@@ -310,6 +430,212 @@ const ProfileMenu = () => {
                         zIndex: 999,
                     }}
                 />
+            )}
+
+            {/* Skin Selector Modal */}
+            {showSkinSelector && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        backdropFilter: 'blur(4px)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 10002,
+                        padding: '20px'
+                    }}
+                    onClick={() => setShowSkinSelector(false)}
+                >
+                    <div
+                        style={{
+                            backgroundColor: '#1F2937',
+                            borderRadius: '16px',
+                            padding: '24px',
+                            maxWidth: '500px',
+                            width: '100%',
+                            maxHeight: '80vh',
+                            overflow: 'auto',
+                            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '20px'
+                        }}>
+                            <h3 style={{
+                                color: '#F9FAFB',
+                                fontSize: '20px',
+                                fontWeight: 'bold',
+                                margin: 0
+                            }}>
+                                👔 Chọn Trang Phục
+                            </h3>
+                            <button
+                                onClick={() => setShowSkinSelector(false)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#9CA3AF',
+                                    fontSize: '24px',
+                                    cursor: 'pointer',
+                                    padding: '0 8px'
+                                }}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {/* Loading */}
+                        {loadingSkins && (
+                            <div style={{
+                                textAlign: 'center',
+                                color: '#9CA3AF',
+                                padding: '40px'
+                            }}>
+                                Đang tải...
+                            </div>
+                        )}
+
+                        {/* Skins Grid */}
+                        {!loadingSkins && skins.length > 0 && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                                gap: '12px'
+                            }}>
+                                {skins.map((skin) => (
+                                    <div
+                                        key={skin.id}
+                                        onClick={() => !skin.equipped && !equippingSkin && handleEquipSkin(skin.id)}
+                                        style={{
+                                            backgroundColor: skin.equipped 
+                                                ? 'rgba(16, 185, 129, 0.15)' 
+                                                : 'rgba(255, 255, 255, 0.05)',
+                                            border: `2px solid ${skin.equipped ? '#10B981' : 'rgba(255, 255, 255, 0.1)'}`,
+                                            borderRadius: '12px',
+                                            padding: '12px',
+                                            cursor: skin.equipped || equippingSkin ? 'default' : 'pointer',
+                                            transition: 'all 0.2s',
+                                            position: 'relative'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!skin.equipped && !equippingSkin) {
+                                                e.currentTarget.style.borderColor = '#3B82F6';
+                                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!skin.equipped) {
+                                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                            }
+                                        }}
+                                    >
+                                        {/* Equipped Badge */}
+                                        {skin.equipped && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '8px',
+                                                right: '8px',
+                                                backgroundColor: '#10B981',
+                                                color: '#fff',
+                                                padding: '2px 6px',
+                                                borderRadius: '4px',
+                                                fontSize: '10px',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                ✓
+                                            </div>
+                                        )}
+
+                                        {/* Skin Icon */}
+                                        <div style={{
+                                            width: '100%',
+                                            height: '80px',
+                                            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                            borderRadius: '8px',
+                                            marginBottom: '8px',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            fontSize: '36px'
+                                        }}>
+                                            {skin.id === 'knight' && '🛡️'}
+                                            {skin.id === 'warrior' && '⚔️'}
+                                            {skin.id === 'mage' && '🔮'}
+                                            {skin.id === 'assassin' && '🗡️'}
+                                            {skin.id === 'dragon_knight' && '🐉'}
+                                        </div>
+
+                                        {/* Skin Name */}
+                                        <div style={{
+                                            color: '#F9FAFB',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            textAlign: 'center',
+                                            marginBottom: '4px'
+                                        }}>
+                                            {skin.name}
+                                        </div>
+
+                                        {/* Status */}
+                                        <div style={{
+                                            color: skin.equipped ? '#10B981' : '#9CA3AF',
+                                            fontSize: '11px',
+                                            textAlign: 'center'
+                                        }}>
+                                            {skin.equipped ? 'Đang dùng' : 'Nhấn để trang bị'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {!loadingSkins && skins.length === 0 && (
+                            <div style={{
+                                textAlign: 'center',
+                                color: '#9CA3AF',
+                                padding: '40px'
+                            }}>
+                                <div style={{ fontSize: '48px', marginBottom: '12px' }}>👔</div>
+                                <div>Bạn chưa có trang phục nào</div>
+                                <div style={{ fontSize: '12px', marginTop: '8px' }}>
+                                    Hãy mua trang phục từ NPC Thợ May!
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setShowSkinSelector(false)}
+                            style={{
+                                width: '100%',
+                                marginTop: '16px',
+                                padding: '12px',
+                                backgroundColor: '#374151',
+                                color: '#F9FAFB',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Đóng
+                        </button>
+                    </div>
+                </div>
             )}
         </>
     );

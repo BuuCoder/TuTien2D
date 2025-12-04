@@ -22,11 +22,13 @@ const MultiplayerManager = () => {
     } = useGameStore();
 
     const [isConnected, setIsConnected] = useState(false);
+    const [isInitialJoin, setIsInitialJoin] = useState(true); // Track if this is the first join
 
     // Hàm join channel sử dụng socket instance được truyền vào
     // để tránh lỗi stale closure
-    const joinChannelWithSocket = (socketInstance: any, channelId: number) => {
+    const joinChannelWithSocket = (socketInstance: any, channelId: number, showNotification = true) => {
         
+        const currentUser = useGameStore.getState().user;
         socketInstance.emit('join_channel', {
             channelId,
             playerData: {
@@ -34,7 +36,8 @@ const MultiplayerManager = () => {
                 y: useGameStore.getState().playerPosition.y,
                 direction: useGameStore.getState().playerDirection,
                 action: useGameStore.getState().playerAction,
-                mapId: useGameStore.getState().currentMapId
+                mapId: useGameStore.getState().currentMapId,
+                skin: currentUser?.skin || 'knight'
             }
         });
     };
@@ -89,6 +92,8 @@ const MultiplayerManager = () => {
         });
 
         socketInstance.on('channel_joined', ({ channelId, players }: any) => {
+            const previousChannel = useGameStore.getState().currentChannel;
+            console.log(`[Channel] Joined channel ${channelId}, previous: ${previousChannel}, isInitial: ${isInitialJoin}`);
             
             setCurrentChannel(channelId);
 
@@ -99,7 +104,18 @@ const MultiplayerManager = () => {
                 }
             });
             setOtherPlayers(playersMap);
-            setNotification({ message: `Đã vào kênh ${channelId}`, type: 'success' });
+            
+            // Only show notification if:
+            // 1. Not initial join
+            // 2. Actually changing channel (not reconnecting to same channel)
+            if (!isInitialJoin && previousChannel !== channelId) {
+                setNotification({ message: `Đã vào kênh ${channelId}`, type: 'success' });
+            }
+            
+            // Mark that initial join is complete
+            if (isInitialJoin) {
+                setIsInitialJoin(false);
+            }
 
             // Request monsters for current map after joining channel
             const currentMapId = useGameStore.getState().currentMapId;
@@ -230,7 +246,8 @@ const MultiplayerManager = () => {
             y: playerPosition.y,
             direction: playerDirection,
             action: playerAction,
-            mapId: currentMapId
+            mapId: currentMapId,
+            skin: user?.skin || 'knight'
         });
     }, [playerPosition, playerDirection, playerAction, currentMapId, socket, isConnected, currentChannel]);
 

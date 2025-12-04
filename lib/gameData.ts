@@ -64,7 +64,8 @@ export const MAPS: Record<string, MapConfig> = {
             { id: 'city-merchant', x: 400, y: 400, type: 'merchant' },
             { id: 'city-healer', x: 800, y: 600, type: 'healer' },
             { id: 'city-guard-1', x: 200, y: 300, type: 'guard' },
-            { id: 'city-guard-2', x: 1400, y: 300, type: 'guard' }
+            { id: 'city-guard-2', x: 1400, y: 300, type: 'guard' },
+            { id: 'skin-merchant', x: 1200, y: 600, type: 'skin-merchant' }
         ],
         portals: [
             { x: 50, y: 450, targetMap: 'map2', targetX: 1250, targetY: 500, label: 'Rừng Hắc Ám' },

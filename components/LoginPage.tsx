@@ -22,14 +22,15 @@ const LoginPage = () => {
             const data = await response.json();
 
             if (data.success) {
-                // Lưu thông tin user vào store (bao gồm socketToken)
+                // Lưu thông tin user vào store (bao gồm socketToken và skin)
                 setUser({
                     id: data.user.id,
                     username: data.user.username,
                     sessionId: data.sessionId,
                     socketToken: data.socketToken, // Token mã hóa cho socket
                     gold: data.inventory.gold,
-                    level: data.stats.level
+                    level: data.stats.level,
+                    skin: data.user.skin || 'knight'
                 });
 
                 // Lưu HP/MP từ database

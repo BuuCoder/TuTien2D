@@ -203,4 +203,19 @@ export const NPC_DATA: Record<string, NPCData> = {
             }
         ]
     },
+
+    // ===== CỬA HÀNG TRANG PHỤC (SKIN SHOP) =====
+    'skin-merchant': {
+        message: 'Chào mừng đến cửa hàng trang phục! Ta có nhiều bộ trang phục đẹp mắt.',
+        menu: [
+            {
+                id: 'skins',
+                name: 'Trang phục',
+                items: [
+                    { id: 'skin-warrior', name: 'Chiến Binh', price: 5000, image: '⚔️', description: 'Trang phục chiến binh dũng mãnh' },
+                    { id: 'skin-assassin', name: 'Sát Thủ', price: 10000, image: '🗡️', description: 'Trang phục sát thủ tàng hình' },
+                ]
+            }
+        ]
+    },
 };
