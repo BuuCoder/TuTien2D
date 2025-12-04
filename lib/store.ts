@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { calculatePlayerStats } from './skinStatsHelper';
 
 interface NPCMessage {
   npcId: string;
@@ -280,6 +281,7 @@ export const useGameStore = create<GameState>((set) => ({
   user: null,
   setUser: (user) => {
     set({ user });
+    
     // Lưu vào localStorage
     if (typeof window !== 'undefined') {
       if (user) {
@@ -399,7 +401,7 @@ if (typeof window !== 'undefined') {
           const user = JSON.parse(savedUser);
           useGameStore.setState({ user });
           
-          // Fetch HP/MP từ database sau khi restore user
+          // Fetch stats từ database (bao gồm max HP/MP đã có skin bonuses)
           import('@/lib/requestObfuscator').then(({ sendObfuscatedRequest }) => {
             sendObfuscatedRequest('/api/player/get-stats', {
               userId: user.id,
@@ -409,12 +411,15 @@ if (typeof window !== 'undefined') {
             .then(res => res.json())
             .then(data => {
               if (data.success && data.stats) {
-                // Update HP/MP
+                // Update stats từ DB (max HP/MP đã bao gồm skin bonuses)
+                // Attack/Defense được tính từ skin
                 useGameStore.getState().setPlayerStats({
                   currentHp: data.stats.hp,
                   maxHp: data.stats.max_hp,
                   mp: data.stats.mp,
                   maxMp: data.stats.max_mp,
+                  attack: data.stats.attack,
+                  defense: data.stats.defense,
                 });
                 
                 // Update gold và level trong user object

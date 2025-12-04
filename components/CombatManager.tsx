@@ -270,8 +270,16 @@ const CombatManager = () => {
 
         // Calculate and apply damage to target
         if (targetId) {
-            const finalDamage = skill.damage;
+            // Áp dụng attack bonus từ skin và player stats
+            const finalDamage = skill.damage + playerStats.attack;
             
+            console.log('[CombatManager] Damage calculation:', {
+                skillId,
+                skillDamage: skill.damage,
+                playerAttack: playerStats.attack,
+                finalDamage,
+                targetType
+            });
             
             if (targetType === 'player') {
                 // Damage to player với isPK flag

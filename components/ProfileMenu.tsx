@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import { useGameStore } from '@/lib/store';
 import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
+import { formatSkinStats, SKINS } from '@/lib/skinData';
+import { calculatePlayerStats, calculatePlayerSpeed } from '@/lib/skinStatsHelper';
 
 const ProfileMenu = () => {
-    const { user, playerStats, setUser, setNotification } = useGameStore();
+    const { user, playerStats, setUser, setNotification, setPlayerStats } = useGameStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
@@ -13,6 +15,7 @@ const ProfileMenu = () => {
     const [skins, setSkins] = useState<any[]>([]);
     const [loadingSkins, setLoadingSkins] = useState(false);
     const [equippingSkin, setEquippingSkin] = useState(false);
+    const [showStatsTooltip, setShowStatsTooltip] = useState(false);
 
     React.useEffect(() => {
         const checkMobile = () => {
@@ -84,8 +87,29 @@ const ProfileMenu = () => {
             console.log('[ProfileMenu] Equip skin response:', data);
 
             if (data.success) {
+                console.log('[ProfileMenu] Updating stats:', data.stats);
+                
                 // Update user skin
                 setUser({ ...user, skin: skinId });
+                
+                // Update stats từ server response
+                if (data.stats) {
+                    setPlayerStats({
+                        maxHp: data.stats.maxHp,
+                        currentHp: data.stats.hp,
+                        maxMp: data.stats.maxMp,
+                        mp: data.stats.mp,
+                        attack: data.stats.attack,
+                        defense: data.stats.defense
+                    });
+                    
+                    console.log('[ProfileMenu] Stats updated:', {
+                        attack: data.stats.attack,
+                        defense: data.stats.defense,
+                        maxHp: data.stats.maxHp,
+                        maxMp: data.stats.maxMp
+                    });
+                }
                 
                 // Reload skins to update equipped status
                 await loadSkins();
@@ -169,11 +193,38 @@ const ProfileMenu = () => {
         return gold.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     };
 
+    // Calculate skin bonuses for display
+    const currentSkin = user?.skin || 'knight';
+    const skinStats = calculatePlayerStats(currentSkin);
+    const skinSpeed = calculatePlayerSpeed(currentSkin);
+    const hasBonus = currentSkin !== 'knight';
+    
+    // Get bonuses directly from skin data
+    const skinData = SKINS[currentSkin];
+    const hpBonus = skinData?.stats?.maxHpBonus || 0;
+    const mpBonus = skinData?.stats?.maxMpBonus || 0;
+    const attackBonus = skinData?.stats?.attackBonus || 0;
+    const defenseBonus = skinData?.stats?.defenseBonus || 0;
+    const speedBonus = skinData?.stats?.speedBonus || 0;
+
+    // Debug log
+    React.useEffect(() => {
+        console.log('[ProfileMenu] Current stats:', {
+            skin: currentSkin,
+            attack: playerStats.attack,
+            defense: playerStats.defense,
+            attackBonus,
+            defenseBonus
+        });
+    }, [currentSkin, playerStats.attack, playerStats.defense, attackBonus, defenseBonus]);
+
     return (
         <>
             {/* Profile Card */}
             <div
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
+                onMouseEnter={() => !isMobile && setShowStatsTooltip(true)}
+                onMouseLeave={() => !isMobile && setShowStatsTooltip(false)}
                 style={{
                     position: 'fixed',
                     top: isMobile ? '12px' : '16px',
@@ -192,18 +243,6 @@ const ProfileMenu = () => {
                     maxWidth: isMobile ? '200px' : 'none',
                     transition: 'all 0.15s ease',
                     userSelect: 'none',
-                }}
-                onMouseEnter={(e) => {
-                    if (!isMobile) {
-                        e.currentTarget.style.backgroundColor = 'rgba(24, 24, 24, 0.98)';
-                        e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
-                    }
-                }}
-                onMouseLeave={(e) => {
-                    if (!isMobile) {
-                        e.currentTarget.style.backgroundColor = 'rgba(17, 17, 17, 0.95)';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                    }
                 }}
             >
                 {/* Avatar */}
@@ -298,12 +337,17 @@ const ProfileMenu = () => {
                                 letterSpacing: '-0.02em'
                             }}>
                                 {playerStats.currentHp}/{playerStats.maxHp}
+                                {hpBonus > 0 && (
+                                    <span style={{ color: '#10B981', marginLeft: '2px' }}>
+                                        (+{hpBonus})
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     {/* MP Bar */}
-                    <div>
+                    <div style={{ marginBottom: isMobile ? '3px' : '4px' }}>
                         <div style={{
                             width: '100%',
                             height: isMobile ? '14px' : '16px',
@@ -331,11 +375,143 @@ const ProfileMenu = () => {
                                 letterSpacing: '-0.02em'
                             }}>
                                 {playerStats.mp}/{playerStats.maxMp}
+                                {mpBonus > 0 && (
+                                    <span style={{ color: '#10B981', marginLeft: '2px' }}>
+                                        (+{mpBonus})
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
+
+                    {/* Attack & Defense */}
+                    <div style={{ 
+                        display: 'flex', 
+                        gap: isMobile ? '4px' : '6px',
+                        fontSize: isMobile ? '9px' : '10px',
+                        color: '#9CA3AF'
+                    }}>
+                        <div style={{ 
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px'
+                        }}>
+                            <span>⚔️</span>
+                            <span style={{ color: attackBonus > 0 ? '#10B981' : '#9CA3AF' }}>
+                                {playerStats.attack}
+                            </span>
+                        </div>
+                        <div style={{ 
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px'
+                        }}>
+                            <span>🛡️</span>
+                            <span style={{ color: defenseBonus > 0 ? '#10B981' : '#9CA3AF' }}>
+                                {playerStats.defense}
+                            </span>
+                        </div>
+                        {speedBonus > 0 && (
+                            <div style={{ 
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px'
+                            }}>
+                                <span>⚡</span>
+                                <span style={{ color: '#10B981' }}>
+                                    +{speedBonus}%
+                                </span>
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {/* Skin Bonus Indicator */}
+                {hasBonus && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                        color: 'white',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '9px',
+                        fontWeight: '600',
+                        letterSpacing: '0.02em',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                    }}>
+                        ⚡ BUFF
+                    </div>
+                )}
             </div>
+
+            {/* Stats Tooltip */}
+            {showStatsTooltip && hasBonus && !isMenuOpen && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: isMobile ? '110px' : '150px',
+                        left: isMobile ? '12px' : '16px',
+                        backgroundColor: 'rgba(17, 17, 17, 0.98)',
+                        borderRadius: '8px',
+                        padding: '12px',
+                        zIndex: 1001,
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+                        minWidth: '200px',
+                        pointerEvents: 'none',
+                    }}
+                >
+                    <div style={{
+                        color: '#10B981',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        marginBottom: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                    }}>
+                        ⚡ Skin Bonuses
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {hpBonus > 0 && (
+                            <div style={{ color: '#EF4444', fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>❤️ Max HP</span>
+                                <span style={{ color: '#10B981' }}>+{hpBonus}</span>
+                            </div>
+                        )}
+                        {mpBonus > 0 && (
+                            <div style={{ color: '#3B82F6', fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>💙 Max MP</span>
+                                <span style={{ color: '#10B981' }}>+{mpBonus}</span>
+                            </div>
+                        )}
+                        {attackBonus > 0 && (
+                            <div style={{ color: '#F59E0B', fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>⚔️ Attack</span>
+                                <span style={{ color: '#10B981' }}>+{attackBonus}</span>
+                            </div>
+                        )}
+                        {defenseBonus > 0 && (
+                            <div style={{ color: '#8B5CF6', fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>🛡️ Defense</span>
+                                <span style={{ color: '#10B981' }}>+{defenseBonus}</span>
+                            </div>
+                        )}
+                        {speedBonus > 0 && (
+                            <div style={{ color: '#06B6D4', fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>⚡ Speed</span>
+                                <span style={{ color: '#10B981' }}>+{speedBonus}%</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Dropdown Menu */}
             {isMenuOpen && (
@@ -587,6 +763,27 @@ const ProfileMenu = () => {
                                         }}>
                                             {skin.name}
                                         </div>
+
+                                        {/* Stats */}
+                                        {skin.stats && formatSkinStats(skin.stats).length > 0 && (
+                                            <div style={{
+                                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                                borderRadius: '4px',
+                                                padding: '4px 6px',
+                                                marginBottom: '4px'
+                                            }}>
+                                                {formatSkinStats(skin.stats).map((stat, idx) => (
+                                                    <div key={idx} style={{
+                                                        color: '#60A5FA',
+                                                        fontSize: '9px',
+                                                        textAlign: 'center',
+                                                        marginBottom: idx < formatSkinStats(skin.stats!).length - 1 ? '1px' : '0'
+                                                    }}>
+                                                        {stat}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
 
                                         {/* Status */}
                                         <div style={{

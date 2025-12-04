@@ -3,8 +3,8 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '@/lib/store';
 import { MAPS } from '@/lib/gameData';
+import { calculatePlayerSpeed } from '@/lib/skinStatsHelper';
 
-const SPEED = 5;
 const TARGET_THRESHOLD = 10; // Distance to consider target reached
 
 const Player = () => {
@@ -26,7 +26,11 @@ const Player = () => {
         return MAPS[currentMapId] || MAPS['map1'];
     }, [currentMapId]);
 
-
+    // Get current skin from user data, default to 'knight'
+    const currentSkin = user?.skin || 'knight';
+    
+    // Calculate speed with skin bonus
+    const SPEED = useMemo(() => calculatePlayerSpeed(currentSkin), [currentSkin]);
 
     const keysPressed = useRef<Set<string>>(new Set());
     const animationFrameId = useRef<number | null>(null);
@@ -75,9 +79,10 @@ const Player = () => {
                 const distance = Math.sqrt(distX * distX + distY * distY);
 
                 if (distance > TARGET_THRESHOLD) {
-                    // Normalize and apply speed
-                    dx = (distX / distance) * SPEED;
-                    dy = (distY / distance) * SPEED;
+                    // Normalize and apply speed (1.2x faster for smoother feel)
+                    const clickSpeed = SPEED * 1.2;
+                    dx = (distX / distance) * clickSpeed;
+                    dy = (distY / distance) * clickSpeed;
                 } else {
                     // Reached target
                     setTargetPosition(null);
@@ -131,10 +136,7 @@ const Player = () => {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [playerPosition, setPlayerPosition, joystickDirection, targetPosition, setTargetPosition, setDirection, setPlayerAction, playerAction, currentMap.width, currentMap.height]);
-
-    // Get current skin from user data, default to 'knight'
-    const currentSkin = user?.skin || 'knight';
+    }, [playerPosition, setPlayerPosition, joystickDirection, targetPosition, setTargetPosition, setDirection, setPlayerAction, playerAction, currentMap.width, currentMap.height, SPEED]);
 
     // When idle, always use down_idle regardless of direction
     const gifPath = playerAction === 'idle'

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '@/lib/store';
 import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
-import { getRarityColor } from '@/lib/skinData';
+import { getRarityColor, formatSkinStats, SkinStats } from '@/lib/skinData';
 import ConfirmDialog from './ConfirmDialog';
 
 interface SkinData {
@@ -16,6 +16,7 @@ interface SkinData {
     isDefault: boolean;
     owned: boolean;
     equipped: boolean;
+    stats?: SkinStats;
 }
 
 interface SkinShopPopupProps {
@@ -296,11 +297,30 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
                                 <p style={{
                                     color: '#9CA3AF',
                                     fontSize: '12px',
-                                    margin: '0 0 12px 0',
-                                    minHeight: '36px'
+                                    margin: '0 0 8px 0'
                                 }}>
                                     {skin.description}
                                 </p>
+
+                                {/* Stats Bonus */}
+                                {skin.stats && formatSkinStats(skin.stats).length > 0 && (
+                                    <div style={{
+                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                        borderRadius: '6px',
+                                        padding: '6px 8px',
+                                        marginBottom: '8px'
+                                    }}>
+                                        {formatSkinStats(skin.stats).map((stat, idx) => (
+                                            <div key={idx} style={{
+                                                color: '#60A5FA',
+                                                fontSize: '10px',
+                                                marginBottom: idx < formatSkinStats(skin.stats!).length - 1 ? '2px' : '0'
+                                            }}>
+                                                {stat}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {/* Price or Status */}
                                 {skin.owned ? (

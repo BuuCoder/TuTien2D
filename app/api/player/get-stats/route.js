@@ -2,6 +2,7 @@ import db from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt.mjs';
 import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
+import { calculatePlayerStats } from '@/lib/skinStatsHelper';
 
 export async function POST(req) {
     try {
@@ -33,7 +34,7 @@ export async function POST(req) {
             );
         }
 
-        // Lấy stats từ database
+        // Lấy stats từ database (max HP/MP đã bao gồm skin bonuses)
         const [stats] = await db.query(
             'SELECT hp, max_hp, mp, max_mp, level, experience FROM user_stats WHERE user_id = ?',
             [userId]
@@ -46,17 +47,33 @@ export async function POST(req) {
             );
         }
 
-        // Lấy gold từ user_inventory
+        // Lấy gold và skin từ users
+        const [userRows] = await db.query(
+            'SELECT skin FROM users WHERE id = ?',
+            [userId]
+        );
+        
         const [inventory] = await db.query(
             'SELECT gold FROM user_inventory WHERE user_id = ?',
             [userId]
         );
 
-        console.log('[GetStats] Success:', { userId, stats: stats[0], gold: inventory[0]?.gold });
+        // Lấy attack/defense từ skin
+        const currentSkin = userRows[0]?.skin || 'knight';
+        const skinStats = calculatePlayerStats(currentSkin);
+        
+        // Stats: max HP/MP từ DB (đã có skin bonuses), attack/defense từ skin
+        const finalStats = {
+            ...stats[0],
+            attack: skinStats.attack,
+            defense: skinStats.defense,
+        };
+
+        console.log('[GetStats] Success:', { userId, stats: finalStats, gold: inventory[0]?.gold, skin: currentSkin });
 
         return NextResponse.json({
             success: true,
-            stats: stats[0],
+            stats: finalStats,
             gold: inventory[0]?.gold || 0
         });
 

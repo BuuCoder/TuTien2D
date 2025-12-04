@@ -2,6 +2,7 @@ import db from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt.mjs';
 import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
+import { calculatePlayerStats } from '@/lib/skinStatsHelper';
 
 export async function POST(req) {
     try {
@@ -56,6 +57,15 @@ export async function POST(req) {
             );
         }
 
+        // Lấy skin của victim để tính defense
+        const [victimUser] = await db.query(
+            'SELECT skin FROM users WHERE id = ?',
+            [userId]
+        );
+        
+        const victimSkin = victimUser[0]?.skin || 'knight';
+        const victimSkinStats = calculatePlayerStats(victimSkin);
+
         const currentStats = victimStats[0];
 
         // Định nghĩa damage cho các skill (server-side validation)
@@ -69,10 +79,13 @@ export async function POST(req) {
             'monster-attack': 15 // Damage từ monster
         };
 
-        const damage = skillDamage[skillId] || 10;
+        const baseDamage = skillDamage[skillId] || 10;
+        
+        // Áp dụng defense bonus từ skin
+        const finalDamage = Math.max(1, baseDamage - victimSkinStats.defense);
 
         // Tính toán HP mới
-        const newHp = Math.max(0, currentStats.hp - damage);
+        const newHp = Math.max(0, currentStats.hp - finalDamage);
 
         // Cập nhật database
         await db.query(
@@ -86,7 +99,9 @@ export async function POST(req) {
             userId, 
             attackerId,
             skillId,
-            damage,
+            baseDamage,
+            defense: victimSkinStats.defense,
+            finalDamage,
             oldHp: currentStats.hp, 
             newHp,
             isDead
@@ -96,7 +111,7 @@ export async function POST(req) {
             success: true,
             hp: newHp,
             maxHp: currentStats.max_hp,
-            damage: damage,
+            damage: finalDamage,
             isDead: isDead
         });
 
