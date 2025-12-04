@@ -11,6 +11,7 @@ import {
     GameActionRequestData,
     GameActionResponse,
 } from '@/lib/types/api';
+import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 
 /**
  * Get user identifier from request (IP address)
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     try {
         // Parse request body
-        const body: GameActionRequestData = await request.json();
+        const body: GameActionRequestData = await parseRequestBody(request);
 
         // Validate request
         const validation = validateRequest(body);

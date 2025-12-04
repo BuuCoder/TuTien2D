@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { verifyToken } from '@/lib/jwt.mjs';
+import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 
 /**
  * API: Buy Item / Service
@@ -8,7 +9,7 @@ import { verifyToken } from '@/lib/jwt.mjs';
  */
 export async function POST(request) {
     try {
-        const body = await request.json();
+        const body = await parseRequestBody(request);
         const { itemId, itemName, price, userId, sessionId, token, npcId } = body;
 
         console.log('[BuyItem] Purchase:', { itemId, itemName, price, userId, npcId });

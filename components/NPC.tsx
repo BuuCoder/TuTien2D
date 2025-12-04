@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '@/lib/store';
+import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
 
 interface NPCProps {
     id: string;
@@ -56,14 +57,10 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
                 }
                 
                 // Fetch greeting message
-                fetch('/api/interact', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        npcId: id,
-                        action: 'greet',
-                        timestamp: new Date().toISOString(),
-                    })
+                sendObfuscatedRequest('/api/interact', {
+                    npcId: id,
+                    action: 'greet',
+                    timestamp: new Date().toISOString(),
                 })
                 .then(res => res.json())
                 .then(data => {
@@ -115,14 +112,10 @@ const NPC: React.FC<NPCProps> = ({ id, x, y, type }) => {
                     setIsInteracting(true);
 
                     try {
-                        const response = await fetch('/api/interact', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                npcId: id,
-                                action: 'talk',
-                                timestamp: new Date().toISOString(),
-                            })
+                        const response = await sendObfuscatedRequest('/api/interact', {
+                            npcId: id,
+                            action: 'talk',
+                            timestamp: new Date().toISOString(),
                         });
 
                         const data = await response.json();

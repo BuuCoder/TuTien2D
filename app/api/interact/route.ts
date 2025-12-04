@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { NPC_DATA } from '@/lib/npcData';
+import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
+        const body = await parseRequestBody(request);
         console.log('Interaction recorded:', body);
 
         // Get NPC data from the new system

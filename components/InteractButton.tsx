@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useGameStore } from '@/lib/store';
+import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
 
 const InteractButton = () => {
     const { nearbyNPCId, setIsInteracting, addNPCMessage, setActiveMenu } = useGameStore();
@@ -13,14 +14,10 @@ const InteractButton = () => {
         setIsInteracting(true);
 
         try {
-            const response = await fetch('/api/interact', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    npcId: npcId,
-                    action: 'talk',
-                    timestamp: new Date().toISOString(),
-                })
+            const response = await sendObfuscatedRequest('/api/interact', {
+                npcId: npcId,
+                action: 'talk',
+                timestamp: new Date().toISOString(),
             });
 
             const data = await response.json();

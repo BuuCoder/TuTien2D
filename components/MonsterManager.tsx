@@ -93,17 +93,40 @@ const MonsterManager = () => {
                                     type: 'error'
                                 });
 
-                                setTimeout(() => {
-                                    state.setCurrentMapId('map1');
-                                    state.setPlayerPosition(400, 300);
-                                    state.setPlayerStats({
-                                        currentHp: state.playerStats.maxHp,
-                                        mp: state.playerStats.maxMp
-                                    });
-                                    socket.emit('update_hp', {
-                                        hp: state.playerStats.maxHp,
-                                        maxHp: state.playerStats.maxHp
-                                    });
+                                // Respawn: gọi API để set HP = 1 trong database
+                                setTimeout(async () => {
+                                    try {
+                                        const currentUser = state.user;
+                                        if (currentUser) {
+                                            const { sendObfuscatedRequest } = await import('@/lib/requestObfuscator');
+                                            const respawnResponse = await sendObfuscatedRequest('/api/player/respawn', {
+                                                userId: currentUser.id,
+                                                sessionId: currentUser.sessionId,
+                                                token: currentUser.socketToken
+                                            });
+
+                                            const respawnData = await respawnResponse.json();
+
+                                            if (respawnData.success) {
+                                                state.setCurrentMapId('map1');
+                                                state.setPlayerPosition(400, 300);
+                                                state.setPlayerStats({
+                                                    currentHp: respawnData.hp,
+                                                    mp: respawnData.mp
+                                                });
+                                                socket.emit('update_hp', {
+                                                    hp: respawnData.hp,
+                                                    maxHp: respawnData.maxHp
+                                                });
+                                                setNotification({
+                                                    message: '🏥 Hồi sinh tại Làng Tân Thủ! (HP: 1)',
+                                                    type: 'info'
+                                                });
+                                            }
+                                        }
+                                    } catch (error) {
+                                        console.error('[Respawn] Failed:', error);
+                                    }
                                 }, 3000);
                             }
 

@@ -475,49 +475,60 @@ const CombatManager = () => {
 
                             // Check death
                             if (result.isDead) {
-                    const activeSessions = useGameStore.getState().activePKSessions;
-                    const isPKDeath = activeSessions.includes(data.attackerId);
-                    
-                    socket.emit('player_death', { 
-                        killerId: data.attackerId,
-                        killerSocketId: data.attackerId,
-                        isPK: isPKDeath // Flag để server biết đây là PK
-                    });
-                    
-                    setNotification({ message: '💀 Bạn đã thua!', type: 'error' });
-                    
-                    // End PK session with killer
-                    const state = useGameStore.getState();
-                    if (state.activePKSessions.includes(data.attackerId)) {
-                        state.removePKSession(data.attackerId);
-                        
-                        // Notify opponent
-                        socket.emit('pk_ended', {
-                            opponentId: data.attackerId,
-                            winner: data.attackerId,
-                            reason: 'death'
-                        });
-                    }
-                    
-                    // Disable PK mode if no more active sessions
-                    if (state.activePKSessions.length === 0) {
-                        state.setIsPKMode(false);
-                    }
-                    
-                    // Teleport to spawn and heal after 3 seconds
-                    setTimeout(() => {
-                        const maxHp = useGameStore.getState().playerStats.maxHp;
-                        const maxMp = useGameStore.getState().playerStats.maxMp;
-                        
-                        useGameStore.getState().setCurrentMapId('map1');
-                        useGameStore.getState().setPlayerPosition(400, 300);
-                        setPlayerStats({ 
-                            currentHp: maxHp,
-                            mp: maxMp 
-                        });
-                        emitHPUpdate(maxHp, maxHp);
-                        setNotification({ message: '🏥 Hồi sinh tại Làng Tân Thủ!', type: 'info' });
-                    }, 3000);
+                                const activeSessions = useGameStore.getState().activePKSessions;
+                                const isPKDeath = activeSessions.includes(data.attackerId);
+                                
+                                socket.emit('player_death', { 
+                                    killerId: data.attackerId,
+                                    killerSocketId: data.attackerId,
+                                    isPK: isPKDeath
+                                });
+                                
+                                setNotification({ message: '💀 Bạn đã thua!', type: 'error' });
+                                
+                                // End PK session with killer
+                                const state = useGameStore.getState();
+                                if (state.activePKSessions.includes(data.attackerId)) {
+                                    state.removePKSession(data.attackerId);
+                                    
+                                    // Notify opponent
+                                    socket.emit('pk_ended', {
+                                        opponentId: data.attackerId,
+                                        winner: data.attackerId,
+                                        reason: 'death'
+                                    });
+                                }
+                                
+                                // Disable PK mode if no more active sessions
+                                if (state.activePKSessions.length === 0) {
+                                    state.setIsPKMode(false);
+                                }
+                                
+                                // Respawn: gọi API để set HP = 1 trong database
+                                setTimeout(async () => {
+                                    try {
+                                        const respawnResponse = await sendObfuscatedRequest('/api/player/respawn', {
+                                            userId: user?.id,
+                                            sessionId: user?.sessionId,
+                                            token: user?.socketToken
+                                        });
+
+                                        const respawnData = await respawnResponse.json();
+
+                                        if (respawnData.success) {
+                                            useGameStore.getState().setCurrentMapId('map1');
+                                            useGameStore.getState().setPlayerPosition(400, 300);
+                                            setPlayerStats({ 
+                                                currentHp: respawnData.hp,
+                                                mp: respawnData.mp 
+                                            });
+                                            emitHPUpdate(respawnData.hp, respawnData.maxHp);
+                                            setNotification({ message: '🏥 Hồi sinh tại Làng Tân Thủ! (HP: 1)', type: 'info' });
+                                        }
+                                    } catch (error) {
+                                        console.error('[Respawn] Failed:', error);
+                                    }
+                                }, 3000);
                             }
                         } else {
                             console.error('[Combat] Take damage API error:', result.error);
@@ -550,16 +561,9 @@ const CombatManager = () => {
                     state.setIsPKMode(false);
                 }
                 
-                // Hồi phục HP/Mana sau khi thắng
-                setPlayerStats({
-                    currentHp: state.playerStats.maxHp,
-                    mp: state.playerStats.maxMp
-                });
-                
-                emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
-                
+                // Người thắng giữ nguyên HP/MP hiện tại
                 setNotification({ 
-                    message: `🏆 Bạn đã chiến thắng ${data.playerUsername}! 💚 HP đã hồi phục!`, 
+                    message: `🏆 Bạn đã chiến thắng ${data.playerUsername}!`, 
                     type: 'success' 
                 });
             }
@@ -579,16 +583,9 @@ const CombatManager = () => {
                 state.setIsPKMode(false);
             }
             
-            // Hồi phục HP/Mana sau khi thắng
-            setPlayerStats({
-                currentHp: state.playerStats.maxHp,
-                mp: state.playerStats.maxMp
-            });
-            
-            emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
-            
+            // Người thắng giữ nguyên HP/MP hiện tại
             setNotification({
-                message: '🏆 Đối thủ đã bỏ chạy! Bạn thắng! 💚 HP đã hồi phục!',
+                message: '🏆 Đối thủ đã bỏ chạy! Bạn thắng!',
                 type: 'success'
             });
         });
@@ -606,22 +603,15 @@ const CombatManager = () => {
                 state.setIsPKMode(false);
             }
 
-            // Hồi phục HP/Mana khi kết thúc PK
-            setPlayerStats({
-                currentHp: state.playerStats.maxHp,
-                mp: state.playerStats.maxMp
-            });
-            
-            emitHPUpdate(state.playerStats.maxHp, state.playerStats.maxHp);
-
+            // Người thắng giữ nguyên HP/MP hiện tại
             if (data.winner === socket.id) {
                 setNotification({
-                    message: '🏆 Chiến thắng! 💚 HP đã hồi phục!',
+                    message: '🏆 Chiến thắng!',
                     type: 'success'
                 });
             } else {
                 setNotification({
-                    message: '💚 HP đã hồi phục!',
+                    message: 'PK kết thúc',
                     type: 'info'
                 });
             }

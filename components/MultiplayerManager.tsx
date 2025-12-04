@@ -154,25 +154,9 @@ const MultiplayerManager = () => {
                 // Remove from PK session
                 state.removePKSession(playerId);
                 
-                // Restore HP/Mana (winner gets full recovery)
-                state.setPlayerStats({
-                    currentHp: state.playerStats.maxHp,
-                    mp: state.playerStats.maxMp
-                });
-                
-                // Emit HP update
-                if (socketInstance) {
-                    socketInstance.emit('update_hp', {
-                        hp: state.playerStats.maxHp,
-                        maxHp: state.playerStats.maxHp,
-                        opponentId: null,
-                        isPK: false
-                    });
-                }
-                
-                // Show victory notification
+                // Người thắng giữ nguyên HP/MP hiện tại
                 setNotification({
-                    message: '🏆 Đối thủ đã ngắt kết nối - Bạn thắng! 💚 HP đã hồi phục!',
+                    message: '🏆 Đối thủ đã ngắt kết nối - Bạn thắng!',
                     type: 'success'
                 });
                 

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useGameStore } from '@/lib/store';
+import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
 
 const MenuPopup = () => {
     const { activeMenu, setActiveMenu, setNotification, user, setPlayerStats, playerStats } = useGameStore();
@@ -21,18 +22,14 @@ const MenuPopup = () => {
 
             if (isHealingService) {
                 // Gọi API buy-item cho dịch vụ healing
-                const response = await fetch('/api/buy-item', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        itemId: item.id,
-                        itemName: item.name,
-                        price: item.price,
-                        userId: user.id,
-                        sessionId: user.sessionId,
-                        token: user.socketToken,
-                        npcId: activeMenu.npcId
-                    }),
+                const response = await sendObfuscatedRequest('/api/buy-item', {
+                    itemId: item.id,
+                    itemName: item.name,
+                    price: item.price,
+                    userId: user.id,
+                    sessionId: user.sessionId,
+                    token: user.socketToken,
+                    npcId: activeMenu.npcId
                 });
 
                 const data = await response.json();
@@ -83,11 +80,7 @@ const MenuPopup = () => {
                     requestBody.category = selectedCategory;
                 }
 
-                const response = await fetch('/api/game-action', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody),
-                });
+                const response = await sendObfuscatedRequest('/api/game-action', requestBody);
 
                 const data = await response.json();
 
