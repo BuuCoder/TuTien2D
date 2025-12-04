@@ -270,16 +270,16 @@ const CombatManager = () => {
 
         // Calculate and apply damage to target
         if (targetId) {
-            // Áp dụng attack bonus từ skin và player stats
-            const finalDamage = skill.damage + playerStats.attack;
+            // Công thức đơn giản: Damage = DB.attack + skill_damage
+            const finalDamage = playerStats.attack + skill.damage;
             
-            console.log('[CombatManager] Damage calculation:', {
-                skillId,
-                skillDamage: skill.damage,
-                playerAttack: playerStats.attack,
-                finalDamage,
-                targetType
-            });
+            console.log('═══════════════════════════════════════');
+            console.log('🎯 [DAMAGE CALCULATION]');
+            console.log('Attack (from DB):', playerStats.attack);
+            console.log('Skill Damage:', skill.damage);
+            console.log('FINAL DAMAGE:', finalDamage, '=', playerStats.attack, '+', skill.damage);
+            console.log('Target:', targetType);
+            console.log('═══════════════════════════════════════');
             
             if (targetType === 'player') {
                 // Damage to player với isPK flag
@@ -287,18 +287,18 @@ const CombatManager = () => {
                 const isPKDamage = activeSessions.includes(targetId);
                 
                 socket.emit('take_damage', {
-                    damage: finalDamage,
+                    damage: finalDamage, // Vẫn gửi để hiển thị, nhưng server sẽ tính lại
                     attackerId: socket.id,
+                    attackerUserId: user?.id, // Gửi userId để server query attack từ DB
                     targetId: targetId,
                     skillId,
                     isPK: isPKDamage // Flag để server biết đây là PK
                 });
             } else {
-                // Damage to monster
+                // Damage to monster - Server sẽ tính damage dựa trên skin bonus
                 socket.emit('attack_monster', {
                     monsterId: targetId,
-                    damage: finalDamage,
-                    skillId
+                    skillId // Chỉ gửi skillId, server sẽ tính damage
                 });
             }
         }
@@ -452,12 +452,19 @@ const CombatManager = () => {
                 // Gọi API để take damage (server validate và update database)
                 (async () => {
                     try {
+                        console.log('🛡️ [VICTIM] Receiving damage:', {
+                            skillId: data.skillId,
+                            damageFromAttacker: data.damage,
+                            attackerId: data.attackerId
+                        });
+
                         const response = await sendObfuscatedRequest('/api/player/take-damage', {
                             userId: user?.id,
                             sessionId: user?.sessionId,
                             token: user?.socketToken,
                             attackerId: data.attackerId,
-                            skillId: data.skillId
+                            skillId: data.skillId,
+                            attackerUserId: data.attackerUserId // Gửi userId của attacker để server tính damage
                         });
 
                         const result = await response.json();
@@ -555,7 +562,7 @@ const CombatManager = () => {
         });
 
         // Player died
-        socket.on('player_died', (data: any) => {
+        socket.on('player_died', async (data: any) => {
             
             if (data.killerId === socket.id) {
                 // End PK session
@@ -569,11 +576,36 @@ const CombatManager = () => {
                     state.setIsPKMode(false);
                 }
                 
-                // Người thắng giữ nguyên HP/MP hiện tại
                 setNotification({ 
                     message: `🏆 Bạn đã chiến thắng ${data.playerUsername}!`, 
                     type: 'success' 
                 });
+
+                // Restore HP/MP về 100% (winner cũng được restore)
+                if (user) {
+                    try {
+                        const response = await import('@/lib/requestObfuscator').then(m => 
+                            m.sendObfuscatedRequest('/api/player/restore-hp', {
+                                userId: user.id,
+                                sessionId: user.sessionId,
+                                token: user.socketToken
+                            })
+                        );
+
+                        const restoreData = await response.json();
+                        if (restoreData.success) {
+                            setPlayerStats({
+                                currentHp: restoreData.hp,
+                                maxHp: restoreData.maxHp,
+                                mp: restoreData.mp,
+                                maxMp: restoreData.maxMp
+                            });
+                            console.log('[PK] Winner HP/MP restored to 100%:', restoreData.hp, '/', restoreData.maxHp);
+                        }
+                    } catch (error) {
+                        console.error('[PK] Failed to restore winner HP:', error);
+                    }
+                }
             }
         });
 
@@ -599,7 +631,7 @@ const CombatManager = () => {
         });
 
         // PK Ended
-        socket.on('pk_ended', (data: any) => {
+        socket.on('pk_ended', async (data: any) => {
             
             const state = useGameStore.getState();
             if (state.activePKSessions.includes(data.opponentId)) {
@@ -611,7 +643,7 @@ const CombatManager = () => {
                 state.setIsPKMode(false);
             }
 
-            // Người thắng giữ nguyên HP/MP hiện tại
+            // Show notification
             if (data.winner === socket.id) {
                 setNotification({
                     message: '🏆 Chiến thắng!',
@@ -619,9 +651,35 @@ const CombatManager = () => {
                 });
             } else {
                 setNotification({
-                    message: 'PK kết thúc',
+                    message: data.message || 'PK kết thúc',
                     type: 'info'
                 });
+            }
+
+            // Restore HP/MP về 100% cho cả 2 bên
+            if (user) {
+                try {
+                    const response = await import('@/lib/requestObfuscator').then(m => 
+                        m.sendObfuscatedRequest('/api/player/restore-hp', {
+                            userId: user.id,
+                            sessionId: user.sessionId,
+                            token: user.socketToken
+                        })
+                    );
+
+                    const restoreData = await response.json();
+                    if (restoreData.success) {
+                        setPlayerStats({
+                            currentHp: restoreData.hp,
+                            maxHp: restoreData.maxHp,
+                            mp: restoreData.mp,
+                            maxMp: restoreData.maxMp
+                        });
+                        console.log('[PK] HP/MP restored to 100% after PK end:', restoreData.hp, '/', restoreData.maxHp);
+                    }
+                } catch (error) {
+                    console.error('[PK] Failed to restore HP after PK end:', error);
+                }
             }
         });
 

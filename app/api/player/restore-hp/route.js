@@ -2,13 +2,12 @@ import db from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt.mjs';
 import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
-import { calculatePlayerStats } from '@/lib/skinStatsHelper';
 
 export async function POST(req) {
     try {
         const { userId, sessionId, token } = await parseRequestBody(req);
 
-        console.log('[GetStats] Request:', { userId, sessionId });
+        console.log('[RestoreHP] Request:', { userId, sessionId });
 
         if (!token) {
             return NextResponse.json(
@@ -34,9 +33,9 @@ export async function POST(req) {
             );
         }
 
-        // Lấy stats từ database (bao gồm attack, defense, speed)
+        // Lấy max HP/MP từ database
         const [stats] = await db.query(
-            'SELECT hp, max_hp, mp, max_mp, level, experience, attack, defense, speed FROM user_stats WHERE user_id = ?',
+            'SELECT max_hp, max_mp FROM user_stats WHERE user_id = ?',
             [userId]
         );
 
@@ -47,25 +46,27 @@ export async function POST(req) {
             );
         }
 
-        // Lấu gold từ inventory
-        const [inventory] = await db.query(
-            'SELECT gold FROM user_inventory WHERE user_id = ?',
+        const maxHp = stats[0].max_hp;
+        const maxMp = stats[0].max_mp;
+
+        // Restore HP/MP về 100%
+        await db.query(
+            'UPDATE user_stats SET hp = max_hp, mp = max_mp WHERE user_id = ?',
             [userId]
         );
 
-        // Stats: Tất cả từ DB (bao gồm attack, defense, speed)
-        const finalStats = stats[0];
-
-        console.log('[GetStats] Success:', { userId, stats: finalStats, gold: inventory[0]?.gold });
+        console.log('[RestoreHP] Success:', { userId, hp: maxHp, mp: maxMp });
 
         return NextResponse.json({
             success: true,
-            stats: finalStats,
-            gold: inventory[0]?.gold || 0
+            hp: maxHp,
+            maxHp: maxHp,
+            mp: maxMp,
+            maxMp: maxMp
         });
 
     } catch (error) {
-        console.error('Get stats error:', error);
+        console.error('Restore HP error:', error);
         return NextResponse.json(
             { error: 'Lỗi server: ' + error.message },
             { status: 500 }

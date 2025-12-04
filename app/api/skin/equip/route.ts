@@ -3,7 +3,6 @@ import db from '@/lib/db';
 import { verifyToken } from '@/lib/jwt';
 import { parseRequestBody } from '@/lib/deobfuscateMiddleware';
 import { SKINS } from '@/lib/skinData';
-import { calculatePlayerStats } from '@/lib/skinStatsHelper';
 
 export async function POST(req: Request) {
     try {
@@ -57,9 +56,9 @@ export async function POST(req: Request) {
             );
         }
 
-        // Lấy current stats và old skin từ DB
+        // Lấy current stats (bao gồm base stats) và old skin từ DB
         const [currentStats] = await db.query(
-            'SELECT hp, max_hp, mp, max_mp FROM user_stats WHERE user_id = ?',
+            'SELECT hp, max_hp, mp, max_mp, attack, defense, speed, base_max_hp, base_max_mp, base_attack, base_defense, base_speed FROM user_stats WHERE user_id = ?',
             [userId]
         ) as any[];
 
@@ -78,33 +77,36 @@ export async function POST(req: Request) {
         const oldStats = currentStats[0];
         const oldSkinId = userRows[0]?.skin || 'knight';
 
-        // Tính % HP/MP hiện tại
+        // Tính % HP/MP hiện tại để giữ nguyên sau khi đổi skin
         const hpPercent = oldStats.hp / oldStats.max_hp;
         const mpPercent = oldStats.mp / oldStats.max_mp;
 
-        // Lấy bonuses từ old skin và new skin
-        const oldSkinData = SKINS[oldSkinId];
+        // Lấy base stats từ DB (stats gốc từ level/items)
+        const baseMaxHp = oldStats.base_max_hp || 500;
+        const baseMaxMp = oldStats.base_max_mp || 200;
+        const baseAttack = oldStats.base_attack || 10;
+        const baseDefense = oldStats.base_defense || 5;
+        const baseSpeed = oldStats.base_speed || 5.00;
+
+        // Lấy bonuses từ new skin
         const newSkinData = SKINS[skinId];
-        
-        const oldHpBonus = oldSkinData?.stats?.maxHpBonus || 0;
-        const oldMpBonus = oldSkinData?.stats?.maxMpBonus || 0;
         const newHpBonus = newSkinData?.stats?.maxHpBonus || 0;
         const newMpBonus = newSkinData?.stats?.maxMpBonus || 0;
-
-        // Tính base max HP/MP (loại bỏ old skin bonus)
-        const baseMaxHp = oldStats.max_hp - oldHpBonus;
-        const baseMaxMp = oldStats.max_mp - oldMpBonus;
-
-        // Tính new max HP/MP (thêm new skin bonus)
-        const newMaxHp = baseMaxHp + newHpBonus;
-        const newMaxMp = baseMaxMp + newMpBonus;
+        const newAttackBonus = newSkinData?.stats?.attackBonus || 0;
+        const newDefenseBonus = newSkinData?.stats?.defenseBonus || 0;
+        const newSpeedBonus = newSkinData?.stats?.speedBonus || 0;
+        
+        // Tính final stats từ base stats + skin bonus (TẤT CẢ ĐỀU LÀ %)
+        // Formula: Final = Base * (1 + Bonus%)
+        const newMaxHp = Math.floor(baseMaxHp * (1 + newHpBonus / 100));
+        const newMaxMp = Math.floor(baseMaxMp * (1 + newMpBonus / 100));
+        const newAttack = Math.floor(baseAttack * (1 + newAttackBonus / 100));
+        const newDefense = Math.floor(baseDefense * (1 + newDefenseBonus / 100));
+        const newSpeed = baseSpeed * (1 + newSpeedBonus / 100);
 
         // Tính HP/MP mới dựa trên % (giữ nguyên %)
         const newHp = Math.floor(newMaxHp * hpPercent);
         const newMp = Math.floor(newMaxMp * mpPercent);
-
-        // Lấy attack/defense từ new skin
-        const newSkinStats = calculatePlayerStats(skinId);
 
         // Update user's current skin with additional verification
         const [updateResult] = await db.query(
@@ -121,25 +123,25 @@ export async function POST(req: Request) {
             );
         }
 
-        // Update max HP/MP và current HP/MP trong database
+        // Update final stats trong database (base stats không đổi)
         await db.query(
-            'UPDATE user_stats SET max_hp = ?, hp = ?, max_mp = ?, mp = ? WHERE user_id = ?',
-            [newMaxHp, newHp, newMaxMp, newMp, userId]
+            'UPDATE user_stats SET max_hp = ?, hp = ?, max_mp = ?, mp = ?, attack = ?, defense = ?, speed = ? WHERE user_id = ?',
+            [newMaxHp, newHp, newMaxMp, newMp, newAttack, newDefense, newSpeed, userId]
         );
 
         console.log(`[SkinEquip] User ${userId} equipped ${skinId}:`, {
             oldSkin: oldSkinId,
             newSkin: skinId,
-            oldMaxHp: oldStats.max_hp,
-            oldHpBonus: oldHpBonus,
-            baseMaxHp: baseMaxHp,
-            newHpBonus: newHpBonus,
-            newMaxHp: newMaxHp,
-            oldMaxMp: oldStats.max_mp,
-            oldMpBonus: oldMpBonus,
-            baseMaxMp: baseMaxMp,
-            newMpBonus: newMpBonus,
-            newMaxMp: newMaxMp,
+            baseMaxHp,
+            baseMaxMp,
+            baseAttack,
+            baseDefense,
+            baseSpeed,
+            newMaxHp,
+            newMaxMp,
+            newAttack,
+            newDefense,
+            newSpeed,
             hpPercent: (hpPercent * 100).toFixed(1) + '%',
             mpPercent: (mpPercent * 100).toFixed(1) + '%'
         });
@@ -153,8 +155,8 @@ export async function POST(req: Request) {
                 hp: newHp,
                 maxMp: newMaxMp,
                 mp: newMp,
-                attack: newSkinStats.attack,
-                defense: newSkinStats.defense
+                attack: newAttack,
+                defense: newDefense
             }
         });
 

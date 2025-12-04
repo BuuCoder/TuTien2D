@@ -309,13 +309,99 @@ app.prepare().then(() => {
         });
 
         // PK Request Response - Chỉ gửi cho người gửi request
-        socket.on('pk_request_response', ({ requestId, fromSocketId, accepted }) => {
+        socket.on('pk_request_response', async ({ requestId, fromSocketId, accepted }) => {
             if (!isAuthenticated || !currentChannel || !userId || !username) return;
 
             console.log(`[PK] ${username} ${accepted ? 'accepted' : 'declined'} PK from ${fromSocketId}`);
 
             const requesterSocket = io.sockets.sockets.get(fromSocketId);
             if (requesterSocket) {
+                // Nếu accepted, recalculate stats và restore HP/MP cho cả 2
+                if (accepted) {
+                    try {
+                        const { SKINS } = require('./lib/skinData');
+                        
+                        // Recalculate và restore cho accepter (người chấp nhận)
+                        const [accepterUser] = await db.query('SELECT skin FROM users WHERE id = ?', [userId]);
+                        const [accepterStats] = await db.query(
+                            'SELECT base_max_hp, base_max_mp, base_attack, base_defense, base_speed FROM user_stats WHERE user_id = ?',
+                            [userId]
+                        );
+                        
+                        if (accepterStats.length > 0) {
+                            const accepterSkin = accepterUser[0]?.skin || 'knight';
+                            const accepterSkinData = SKINS[accepterSkin];
+                            
+                            const baseMaxHp = accepterStats[0].base_max_hp || 500;
+                            const baseMaxMp = accepterStats[0].base_max_mp || 200;
+                            const baseAttack = accepterStats[0].base_attack || 10;
+                            const baseDefense = accepterStats[0].base_defense || 5;
+                            const baseSpeed = accepterStats[0].base_speed || 5.00;
+                            
+                            const hpBonus = accepterSkinData?.stats?.maxHpBonus || 0;
+                            const mpBonus = accepterSkinData?.stats?.maxMpBonus || 0;
+                            const attackBonus = accepterSkinData?.stats?.attackBonus || 0;
+                            const defenseBonus = accepterSkinData?.stats?.defenseBonus || 0;
+                            const speedBonus = accepterSkinData?.stats?.speedBonus || 0;
+                            
+                            const finalMaxHp = Math.floor(baseMaxHp * (1 + hpBonus / 100));
+                            const finalMaxMp = Math.floor(baseMaxMp * (1 + mpBonus / 100));
+                            const finalAttack = Math.floor(baseAttack * (1 + attackBonus / 100));
+                            const finalDefense = Math.floor(baseDefense * (1 + defenseBonus / 100));
+                            const finalSpeed = baseSpeed * (1 + speedBonus / 100);
+                            
+                            await db.query(
+                                'UPDATE user_stats SET max_hp = ?, hp = ?, max_mp = ?, mp = ?, attack = ?, defense = ?, speed = ? WHERE user_id = ?',
+                                [finalMaxHp, finalMaxHp, finalMaxMp, finalMaxMp, finalAttack, finalDefense, finalSpeed, userId]
+                            );
+                            
+                            console.log(`[PK] Restored ${username} (accepter): HP=${finalMaxHp}, MP=${finalMaxMp}, Attack=${finalAttack}`);
+                        }
+                        
+                        // Recalculate và restore cho requester (người gửi request)
+                        const requesterUserId = requesterSocket.data?.userId;
+                        if (requesterUserId) {
+                            const [requesterUser] = await db.query('SELECT skin FROM users WHERE id = ?', [requesterUserId]);
+                            const [requesterStats] = await db.query(
+                                'SELECT base_max_hp, base_max_mp, base_attack, base_defense, base_speed FROM user_stats WHERE user_id = ?',
+                                [requesterUserId]
+                            );
+                            
+                            if (requesterStats.length > 0) {
+                                const requesterSkin = requesterUser[0]?.skin || 'knight';
+                                const requesterSkinData = SKINS[requesterSkin];
+                                
+                                const baseMaxHp = requesterStats[0].base_max_hp || 500;
+                                const baseMaxMp = requesterStats[0].base_max_mp || 200;
+                                const baseAttack = requesterStats[0].base_attack || 10;
+                                const baseDefense = requesterStats[0].base_defense || 5;
+                                const baseSpeed = requesterStats[0].base_speed || 5.00;
+                                
+                                const hpBonus = requesterSkinData?.stats?.maxHpBonus || 0;
+                                const mpBonus = requesterSkinData?.stats?.maxMpBonus || 0;
+                                const attackBonus = requesterSkinData?.stats?.attackBonus || 0;
+                                const defenseBonus = requesterSkinData?.stats?.defenseBonus || 0;
+                                const speedBonus = requesterSkinData?.stats?.speedBonus || 0;
+                                
+                                const finalMaxHp = Math.floor(baseMaxHp * (1 + hpBonus / 100));
+                                const finalMaxMp = Math.floor(baseMaxMp * (1 + mpBonus / 100));
+                                const finalAttack = Math.floor(baseAttack * (1 + attackBonus / 100));
+                                const finalDefense = Math.floor(baseDefense * (1 + defenseBonus / 100));
+                                const finalSpeed = baseSpeed * (1 + speedBonus / 100);
+                                
+                                await db.query(
+                                    'UPDATE user_stats SET max_hp = ?, hp = ?, max_mp = ?, mp = ?, attack = ?, defense = ?, speed = ? WHERE user_id = ?',
+                                    [finalMaxHp, finalMaxHp, finalMaxMp, finalMaxMp, finalAttack, finalDefense, finalSpeed, requesterUserId]
+                                );
+                                
+                                console.log(`[PK] Restored ${requesterSocket.data?.username} (requester): HP=${finalMaxHp}, MP=${finalMaxMp}, Attack=${finalAttack}`);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('[PK] Error restoring stats:', error);
+                    }
+                }
+                
                 // CHỈ gửi cho người gửi request, không broadcast
                 requesterSocket.emit('pk_request_response', {
                     requestId,
@@ -388,10 +474,10 @@ app.prepare().then(() => {
         });
 
         // Combat: Take damage - Chỉ gửi cho target
-        socket.on('take_damage', ({ damage, attackerId, targetId, skillId, isPK }) => {
+        socket.on('take_damage', ({ damage, attackerId, attackerUserId, targetId, skillId, isPK }) => {
             if (!isAuthenticated || !currentChannel) return;
 
-            console.log(`[Combat] Damage request: ${damage} from ${attackerId} (${socket.id}) to ${targetId} (PK: ${isPK})`);
+            console.log(`[Combat] Damage request from user ${attackerUserId} (${attackerId}) to ${targetId} (PK: ${isPK})`);
 
             // Verify attacker is the one sending
             if (attackerId !== socket.id) {
@@ -405,8 +491,9 @@ app.prepare().then(() => {
                 console.log(`[Combat] Sending damage to target ${targetId}`);
                 targetSocket.emit('player_damaged', {
                     playerId: targetId,
-                    damage,
+                    damage, // Client damage (for display only)
                     attackerId,
+                    attackerUserId, // Server sẽ dùng này để tính damage thực
                     skillId,
                     isPK,
                     timestamp: Date.now()
@@ -716,7 +803,7 @@ app.prepare().then(() => {
         });
 
         // Player attacks monster
-        socket.on('attack_monster', ({ monsterId, damage }) => {
+        socket.on('attack_monster', async ({ monsterId, skillId }) => {
             if (!isAuthenticated || !currentChannel) return;
 
             const rateCheck = rateLimiter.check(userId, 'attack_monster');
@@ -728,45 +815,82 @@ app.prepare().then(() => {
             const monster = channelMonsters.get(monsterId);
             if (!monster || monster.isDead) return;
 
-            const newHp = Math.max(0, monster.hp - damage);
-            monster.hp = newHp;
+            try {
+                // Lấy attack từ DB (đã có skin bonus)
+                const [statsRows] = await db.query(
+                    'SELECT attack FROM user_stats WHERE user_id = ?',
+                    [userId]
+                );
+                const playerAttack = statsRows[0]?.attack || 10;
 
-            console.log(`[Monster Ch${currentChannel}] ${username} attacked ${monster.name} for ${damage} damage (HP: ${newHp}/${monster.maxHp})`);
+                // Định nghĩa base damage cho các skill
+                const skillBaseDamage = {
+                    'basic-attack': 10,
+                    'slash': 25,
+                    'charge': 35,
+                    'fireball': 40,
+                    'ice-spike': 45,
+                    'holy-strike': 50
+                };
 
-            if (newHp <= 0) {
-                monster.isDead = true;
-                monster.hp = 0;
+                const baseSkillDamage = skillBaseDamage[skillId] || 10;
 
-                console.log(`[Monster Ch${currentChannel}] ${monster.name} died! Gold drop: ${monster.goldDrop}`);
+                // Công thức đơn giản: Damage = DB.attack + skill_damage
+                // Monster không có defense
+                const totalDamage = playerAttack + baseSkillDamage;
+                const finalDamage = Math.floor(totalDamage);
 
-                io.to(`channel_${currentChannel}`).emit('monster_died', {
-                    monsterId,
-                    goldDrop: monster.goldDrop,
-                    killerId: socket.id,
-                    killerUsername: username
+                console.log(`[Monster Ch${currentChannel}] ${username} attacked ${monster.name}:`, {
+                    skillId,
+                    baseSkillDamage,
+                    playerAttack,
+                    totalDamage,
+                    attackWithBonus: attackWithBonus.toFixed(2),
+                    finalDamage
                 });
 
-                // Respawn after 30 seconds
-                const respawnChannel = currentChannel;
-                setTimeout(() => {
-                    monster.hp = monster.maxHp;
-                    monster.isDead = false;
-                    delete monster.goldDrop;
+                const newHp = Math.max(0, monster.hp - finalDamage);
+                monster.hp = newHp;
 
-                    console.log(`[Monster Ch${respawnChannel}] ${monster.name} respawned`);
+                console.log(`[Monster Ch${currentChannel}] ${monster.name} took ${finalDamage} damage (HP: ${newHp}/${monster.maxHp})`);
 
-                    io.to(`channel_${respawnChannel}`).emit('monster_respawned', {
-                        ...monster,
-                        hp: monster.maxHp,
-                        isDead: false
+                if (newHp <= 0) {
+                    monster.isDead = true;
+                    monster.hp = 0;
+
+                    console.log(`[Monster Ch${currentChannel}] ${monster.name} died! Gold drop: ${monster.goldDrop}`);
+
+                    io.to(`channel_${currentChannel}`).emit('monster_died', {
+                        monsterId,
+                        goldDrop: monster.goldDrop,
+                        killerId: socket.id,
+                        killerUsername: username
                     });
-                }, 30000);
-            } else {
-                io.to(`channel_${currentChannel}`).emit('monster_updated', {
-                    monsterId,
-                    hp: newHp,
-                    maxHp: monster.maxHp
-                });
+
+                    // Respawn after 30 seconds
+                    const respawnChannel = currentChannel;
+                    setTimeout(() => {
+                        monster.hp = monster.maxHp;
+                        monster.isDead = false;
+                        delete monster.goldDrop;
+
+                        console.log(`[Monster Ch${respawnChannel}] ${monster.name} respawned`);
+
+                        io.to(`channel_${respawnChannel}`).emit('monster_respawned', {
+                            ...monster,
+                            hp: monster.maxHp,
+                            isDead: false
+                        });
+                    }, 30000);
+                } else {
+                    io.to(`channel_${currentChannel}`).emit('monster_updated', {
+                        monsterId,
+                        hp: newHp,
+                        maxHp: monster.maxHp
+                    });
+                }
+            } catch (error) {
+                console.error('[Monster Attack] Error:', error);
             }
         });
 

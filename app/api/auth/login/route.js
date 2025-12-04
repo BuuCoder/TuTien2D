@@ -50,7 +50,7 @@ export async function POST(req) {
             [user.id]
         );
 
-        // Lấy stats
+        // Lấy stats (bao gồm base stats)
         const [stats] = await db.query(
             'SELECT * FROM user_stats WHERE user_id = ?',
             [user.id]
@@ -59,18 +59,116 @@ export async function POST(req) {
         // Tạo JWT token cho socket authentication
         const socketToken = generateToken(user.id, user.username, sessionId);
 
+        const dbStats = stats[0];
+        
+        // Nếu không có stats, tạo default
+        if (!dbStats) {
+            const userStats = { 
+                level: 1, 
+                experience: 0, 
+                hp: 500, 
+                max_hp: 500,
+                mp: 200,
+                max_mp: 200,
+                attack: 10,
+                defense: 5,
+                speed: 5.00,
+                base_max_hp: 500,
+                base_max_mp: 200,
+                base_attack: 10,
+                base_defense: 5,
+                base_speed: 5.00
+            };
+            
+            return NextResponse.json({
+                success: true,
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    skin: user.skin || 'knight'
+                },
+                sessionId,
+                socketToken,
+                inventory: inventory[0] || { gold: 0, items: [] },
+                stats: userStats
+            });
+        }
+
+        // Tính lại final stats từ base stats + skin bonus
+        const { SKINS } = require('@/lib/skinData');
+        const skinId = user.skin || 'knight';
+        const skinData = SKINS[skinId];
+        
+        const hpBonus = skinData?.stats?.maxHpBonus || 0;
+        const mpBonus = skinData?.stats?.maxMpBonus || 0;
+        const attackBonus = skinData?.stats?.attackBonus || 0;
+        const defenseBonus = skinData?.stats?.defenseBonus || 0;
+        const speedBonus = skinData?.stats?.speedBonus || 0;
+
+        // Base stats từ DB
+        const baseMaxHp = dbStats.base_max_hp || 500;
+        const baseMaxMp = dbStats.base_max_mp || 200;
+        const baseAttack = dbStats.base_attack || 10;
+        const baseDefense = dbStats.base_defense || 5;
+        const baseSpeed = dbStats.base_speed || 5.00;
+
+        // Tính final stats: Final = Base * (1 + Bonus%)
+        const finalMaxHp = Math.floor(baseMaxHp * (1 + hpBonus / 100));
+        const finalMaxMp = Math.floor(baseMaxMp * (1 + mpBonus / 100));
+        const finalAttack = Math.floor(baseAttack * (1 + attackBonus / 100));
+        const finalDefense = Math.floor(baseDefense * (1 + defenseBonus / 100));
+        const finalSpeed = baseSpeed * (1 + speedBonus / 100);
+
+        // Tính % HP/MP hiện tại
+        const hpPercent = dbStats.hp / dbStats.max_hp;
+        const mpPercent = dbStats.mp / dbStats.max_mp;
+        const finalHp = Math.floor(finalMaxHp * hpPercent);
+        const finalMp = Math.floor(finalMaxMp * mpPercent);
+
+        // Update final stats vào DB
+        await db.query(
+            'UPDATE user_stats SET max_hp = ?, hp = ?, max_mp = ?, mp = ?, attack = ?, defense = ?, speed = ? WHERE user_id = ?',
+            [finalMaxHp, finalHp, finalMaxMp, finalMp, finalAttack, finalDefense, finalSpeed, user.id]
+        );
+
+        console.log(`[Login] User ${user.id} (${user.username}) recalculated stats:`, {
+            skinId,
+            baseAttack,
+            finalAttack,
+            baseDefense,
+            finalDefense
+        });
+
+        const userStats = {
+            level: dbStats.level || 1,
+            experience: dbStats.experience || 0,
+            hp: finalHp,
+            max_hp: finalMaxHp,
+            mp: finalMp,
+            max_mp: finalMaxMp,
+            attack: finalAttack,
+            defense: finalDefense,
+            speed: finalSpeed,
+            base_max_hp: baseMaxHp,
+            base_max_mp: baseMaxMp,
+            base_attack: baseAttack,
+            base_defense: baseDefense,
+            base_speed: baseSpeed
+        };
+
         return NextResponse.json({
             success: true,
             user: {
                 id: user.id,
                 username: user.username,
                 email: user.email,
-                skin: user.skin || 'knight'
+                skin: skinId
             },
             sessionId,
-            socketToken, // Token mã hóa cho socket
+            socketToken,
             inventory: inventory[0] || { gold: 0, items: [] },
-            stats: stats[0] || { level: 1, experience: 0, hp: 100, max_hp: 100 }
+            stats: userStats
         });
 
     } catch (error) {

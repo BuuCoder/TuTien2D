@@ -33,13 +33,23 @@ const LoginPage = () => {
                     skin: data.user.skin || 'knight'
                 });
 
-                // Lưu HP/MP từ database
+                // Lưu HP/MP/Attack/Defense từ database (attack đã có skin bonus)
                 const { setPlayerStats } = useGameStore.getState();
                 setPlayerStats({
                     currentHp: data.stats.hp,
                     maxHp: data.stats.max_hp,
                     mp: data.stats.mp,
                     maxMp: data.stats.max_mp,
+                    attack: data.stats.attack || 10,
+                    defense: data.stats.defense || 5
+                });
+                
+                console.log('[Login] Loaded player stats:', {
+                    hp: data.stats.hp,
+                    maxHp: data.stats.max_hp,
+                    attack: data.stats.attack,
+                    defense: data.stats.defense,
+                    skin: data.user.skin
                 });
 
                 setNotification({ message: 'Đăng nhập thành công!', type: 'success' });

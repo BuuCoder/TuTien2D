@@ -6,7 +6,7 @@ import { useGameStore } from '@/lib/store';
 const NEARBY_DISTANCE = 100; // pixels
 
 const OtherPlayers = () => {
-    const { currentMapId, otherPlayers, playerPosition, socket, user } = useGameStore();
+    const { currentMapId, otherPlayers, playerPosition, socket, user, activePKSessions } = useGameStore();
 
     const sendFriendRequest = (playerId: string, playerUserId: number, playerUsername: string) => {
         if (!socket || !user) return;
@@ -94,8 +94,10 @@ const OtherPlayers = () => {
                             top: '-35px',
                             left: '50%',
                             transform: 'translateX(-50%)',
-                            color: '#aaa',
-                            textShadow: '1px 1px 2px black',
+                            color: activePKSessions.includes(player.id) ? '#e74c3c' : '#aaa',
+                            textShadow: activePKSessions.includes(player.id) 
+                                ? '0 0 8px rgba(231, 76, 60, 0.8), 1px 1px 2px black' 
+                                : '1px 1px 2px black',
                             fontSize: '12px',
                             whiteSpace: 'nowrap',
                             fontWeight: 'bold',
@@ -104,8 +106,8 @@ const OtherPlayers = () => {
                             {player.username || 'Người chơi khác'}
                         </div>
 
-                        {/* HP Bar */}
-                        {player.hp !== undefined && player.maxHp && (
+                        {/* HP Bar - Chỉ hiển thị khi đang PK */}
+                        {player.hp !== undefined && player.maxHp && activePKSessions.includes(player.id) && (
                             <div style={{
                                 position: 'absolute',
                                 top: '-22px',
@@ -127,7 +129,7 @@ const OtherPlayers = () => {
                             </div>
                         )}
 
-                        {isNearby && (
+                        {isNearby && !activePKSessions.includes(player.id) && activePKSessions.length === 0 && (
                             <div style={{
                                 position: 'absolute',
                                 top: '70px',
@@ -177,6 +179,28 @@ const OtherPlayers = () => {
                                 >
                                     ⚔️
                                 </button>
+                            </div>
+                        )}
+                        
+                        {/* PK Status Badge */}
+                        {activePKSessions.includes(player.id) && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '70px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                padding: '4px 8px',
+                                backgroundColor: 'rgba(231, 76, 60, 0.9)',
+                                color: 'white',
+                                border: '1px solid #c0392b',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                                pointerEvents: 'none'
+                            }}>
+                                ⚔️ Đang PK
                             </div>
                         )}
                     </div>

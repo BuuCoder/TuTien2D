@@ -70,6 +70,7 @@ interface PlayerStats {
   mp: number;
   attack: number;
   defense: number;
+  attackBonusPercent?: number; // % bonus từ skin
 }
 
 interface SkillCooldown {
@@ -306,6 +307,7 @@ export const useGameStore = create<GameState>((set) => ({
     mp: 200,
     attack: 10,
     defense: 5,
+    attackBonusPercent: 0,
   },
   setPlayerStats: (stats) => {
     set((state) => ({

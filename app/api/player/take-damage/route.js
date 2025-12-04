@@ -6,7 +6,7 @@ import { calculatePlayerStats } from '@/lib/skinStatsHelper';
 
 export async function POST(req) {
     try {
-        const { userId, sessionId, token, attackerId, skillId, attackerToken } = await parseRequestBody(req);
+        const { userId, sessionId, token, attackerId, skillId, attackerToken, attackerUserId } = await parseRequestBody(req);
 
         console.log('[TakeDamage] Request:', { userId, sessionId, attackerId, skillId });
 
@@ -44,7 +44,7 @@ export async function POST(req) {
             }
         }
 
-        // Lấy stats của victim từ database
+        // Lấy stats của victim từ database (bao gồm skin)
         const [victimStats] = await db.query(
             'SELECT hp, max_hp, mp, max_mp FROM user_stats WHERE user_id = ?',
             [userId]
@@ -57,32 +57,69 @@ export async function POST(req) {
             );
         }
 
-        // Lấy skin của victim để tính defense
+        const currentStats = victimStats[0];
+
+        // Lấy skin của victim để tính defense có bonus
         const [victimUser] = await db.query(
             'SELECT skin FROM users WHERE id = ?',
             [userId]
         );
+        const victimSkinId = victimUser[0]?.skin || 'knight';
+        const victimStatsWithSkin = calculatePlayerStats(victimSkinId);
+        const victimDefense = victimStatsWithSkin.defense;
+
+        console.log('[TakeDamage] Victim stats:', {
+            userId,
+            skinId: victimSkinId,
+            defense: victimDefense
+        });
+
+        // Lấy attack của attacker từ DB (đã có skin bonus)
+        let attackerAttack = 10;
         
-        const victimSkin = victimUser[0]?.skin || 'knight';
-        const victimSkinStats = calculatePlayerStats(victimSkin);
+        if (attackerUserId) {
+            console.log('[TakeDamage] Querying attacker stats for userId:', attackerUserId);
+            
+            // Lấy attack từ DB (đã có skin bonus)
+            const [attackerStats] = await db.query(
+                'SELECT attack FROM user_stats WHERE user_id = ?',
+                [attackerUserId]
+            );
+            attackerAttack = attackerStats[0]?.attack || 10;
+            
+            console.log('[TakeDamage] Attacker stats:', {
+                userId: attackerUserId,
+                attack: attackerAttack
+            });
+        } else {
+            console.warn('[TakeDamage] No attackerUserId provided! Using default attack: 10');
+        }
 
-        const currentStats = victimStats[0];
-
-        // Định nghĩa damage cho các skill (server-side validation)
-        const skillDamage = {
+        // Định nghĩa base damage cho các skill
+        const skillBaseDamage = {
             'basic-attack': 10,
             'slash': 25,
             'charge': 35,
             'fireball': 40,
             'ice-spike': 45,
             'holy-strike': 50,
-            'monster-attack': 15 // Damage từ monster
+            'monster-attack': 15
         };
 
-        const baseDamage = skillDamage[skillId] || 10;
-        
-        // Áp dụng defense bonus từ skin
-        const finalDamage = Math.max(1, baseDamage - victimSkinStats.defense);
+        const baseSkillDamage = skillBaseDamage[skillId] || 10;
+
+        // Công thức đơn giản: Damage = DB.attack + skill_damage - defense
+        const totalDamage = attackerAttack + baseSkillDamage;
+        const finalDamage = Math.max(1, Math.floor(totalDamage - victimDefense));
+
+        console.log('[TakeDamage] Server-side calculation:', {
+            skillId,
+            baseSkillDamage,
+            attackerAttack,
+            totalDamage,
+            victimDefense,
+            finalDamage
+        });
 
         // Tính toán HP mới
         const newHp = Math.max(0, currentStats.hp - finalDamage);
@@ -99,8 +136,8 @@ export async function POST(req) {
             userId, 
             attackerId,
             skillId,
-            baseDamage,
-            defense: victimSkinStats.defense,
+            attackerAttack,
+            totalDamage,
             finalDamage,
             oldHp: currentStats.hp, 
             newHp,

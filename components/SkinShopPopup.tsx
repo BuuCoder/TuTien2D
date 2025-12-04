@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from '@/lib/store';
 import { sendObfuscatedRequest } from '@/lib/requestObfuscator';
 import { getRarityColor, formatSkinStats, SkinStats } from '@/lib/skinData';
+import { calculatePlayerStats } from '@/lib/skinStatsHelper';
 import ConfirmDialog from './ConfirmDialog';
 
 interface SkinData {
@@ -132,6 +133,21 @@ export default function SkinShopPopup({ onClose }: SkinShopPopupProps) {
             if (data.success) {
                 // Update user skin
                 setUser({ ...user, skin: skin.id });
+                
+                // Update player stats với skin bonus (attack đã có bonus)
+                if (data.stats) {
+                    const setPlayerStats = useGameStore.getState().setPlayerStats;
+                    setPlayerStats({
+                        maxHp: data.stats.maxHp,
+                        currentHp: data.stats.hp,
+                        maxMp: data.stats.maxMp,
+                        mp: data.stats.mp,
+                        attack: data.stats.attack,
+                        defense: data.stats.defense
+                    });
+                    
+                    console.log('[SkinEquip] Updated player stats:', data.stats);
+                }
                 
                 // Reload skins
                 await loadSkins();

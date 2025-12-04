@@ -21,6 +21,7 @@ import PKRequestPopup from './PKRequestPopup';
 import MonsterManager from './MonsterManager';
 import AutoSaveStats from './AutoSaveStats';
 import TokenExpiredNotice from './TokenExpiredNotice';
+import PKMapChangeDetector from './PKMapChangeDetector';
 
 const GameContent = () => {
     const { user, currentMapId } = useGameStore();
@@ -72,6 +73,7 @@ const GameContent = () => {
             <CombatManager />
             <MonsterManager />
             <AutoSaveStats />
+            <PKMapChangeDetector />
         </>
     );
 };

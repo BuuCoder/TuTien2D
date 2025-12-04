@@ -1,11 +1,11 @@
 // Skin Data - Danh sách các skin có trong game
 
 export interface SkinStats {
-    maxHpBonus?: number;      // Tăng HP tối đa
-    maxMpBonus?: number;      // Tăng MP tối đa
-    speedBonus?: number;      // Tăng % tốc độ di chuyển
-    attackBonus?: number;     // Tăng sát thương
-    defenseBonus?: number;    // Tăng phòng thủ
+    maxHpBonus?: number;      // Tăng % HP tối đa (VD: 10 = +10%)
+    maxMpBonus?: number;      // Tăng % MP tối đa (VD: 50 = +50%)
+    speedBonus?: number;      // Tăng % tốc độ di chuyển (VD: 10 = +10%)
+    attackBonus?: number;     // Tăng % sát thương (VD: 50 = +50%)
+    defenseBonus?: number;    // Tăng % phòng thủ (VD: 60 = +60%)
 }
 
 export interface SkinData {
@@ -41,9 +41,9 @@ export const SKINS: Record<string, SkinData> = {
         rarity: 'rare',
         isDefault: false,
         stats: {
-            maxHpBonus: 50,      // +50 HP
-            attackBonus: 5,      // +5 Attack
-            defenseBonus: 3      // +3 Defense
+            maxHpBonus: 10,      // +10% HP
+            attackBonus: 50,     // +50% Attack
+            defenseBonus: 60     // +60% Defense
         }
     },
     mage: {
@@ -55,7 +55,7 @@ export const SKINS: Record<string, SkinData> = {
         rarity: 'epic',
         isDefault: false,
         stats: {
-            maxMpBonus: 100,     // +100 MP
+            maxMpBonus: 50,      // +50% MP
             speedBonus: 10       // +10% Speed
         }
     },
@@ -68,9 +68,9 @@ export const SKINS: Record<string, SkinData> = {
         rarity: 'epic',
         isDefault: false,
         stats: {
-            attackBonus: 300,
-            maxHpBonus: 100,
-            speedBonus: 100,
+            attackBonus: 300,    // +300% Attack
+            maxHpBonus: 20,      // +20% HP
+            speedBonus: 100,     // +100% Speed
         }
     },
     dragon_knight: {
@@ -82,11 +82,11 @@ export const SKINS: Record<string, SkinData> = {
         rarity: 'legendary',
         isDefault: false,
         stats: {
-            maxHpBonus: 100,     // +100 HP
-            maxMpBonus: 50,      // +50 MP
+            maxHpBonus: 20,      // +20% HP
+            maxMpBonus: 25,      // +25% MP
             speedBonus: 20,      // +20% Speed
-            attackBonus: 10,     // +10 Attack
-            defenseBonus: 10     // +10 Defense
+            attackBonus: 100,    // +100% Attack
+            defenseBonus: 200    // +200% Defense
         }
     }
 };
@@ -119,19 +119,19 @@ export const formatSkinStats = (stats?: SkinStats): string[] => {
     const formatted: string[] = [];
     
     if (stats.maxHpBonus) {
-        formatted.push(`❤️ +${stats.maxHpBonus} HP`);
+        formatted.push(`❤️ +${stats.maxHpBonus}% HP`);
     }
     if (stats.maxMpBonus) {
-        formatted.push(`💙 +${stats.maxMpBonus} MP`);
+        formatted.push(`💙 +${stats.maxMpBonus}% MP`);
     }
     if (stats.speedBonus) {
         formatted.push(`⚡ +${stats.speedBonus}% Tốc độ`);
     }
     if (stats.attackBonus) {
-        formatted.push(`⚔️ +${stats.attackBonus} Sát thương`);
+        formatted.push(`⚔️ +${stats.attackBonus}% Sát thương`);
     }
     if (stats.defenseBonus) {
-        formatted.push(`🛡️ +${stats.defenseBonus} Phòng thủ`);
+        formatted.push(`🛡️ +${stats.defenseBonus}% Phòng thủ`);
     }
     
     return formatted;

@@ -21,6 +21,7 @@ export const getSkinStats = (skinId: string): SkinStats => {
 
 /**
  * Tính toán stats cuối cùng với skin bonuses
+ * Note: attackBonus là % nên không cộng vào base attack
  */
 export const calculatePlayerStats = (skinId: string = 'knight') => {
     const skinStats = getSkinStats(skinId);
@@ -28,8 +29,9 @@ export const calculatePlayerStats = (skinId: string = 'knight') => {
     return {
         maxHp: BASE_STATS.maxHp + (skinStats.maxHpBonus || 0),
         maxMp: BASE_STATS.maxMp + (skinStats.maxMpBonus || 0),
-        attack: BASE_STATS.attack + (skinStats.attackBonus || 0),
+        attack: BASE_STATS.attack, // Base attack, không cộng bonus
         defense: BASE_STATS.defense + (skinStats.defenseBonus || 0),
+        attackBonusPercent: skinStats.attackBonus || 0 // Return % bonus
     };
 };
 
