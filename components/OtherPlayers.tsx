@@ -96,9 +96,9 @@ const OtherPlayerComponent = memo(({ player, playerPosition, socket, user, activ
             {/* Player name */}
             <div style={{
                 position: 'absolute',
-                top: '-35px',
+                top: 'calc(50% - 50px)',
                 left: '50%',
-                transform: 'translateX(-50%)',
+                transform: 'translate(-50%, -50%)',
                 color: activePKSessions.includes(player.id) ? '#e74c3c' : '#aaa',
                 textShadow: activePKSessions.includes(player.id)
                     ? '0 0 8px rgba(231, 76, 60, 0.8), 1px 1px 2px black'

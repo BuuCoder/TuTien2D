@@ -165,9 +165,9 @@ const Player = () => {
         >
             <div style={{
                 position: 'absolute',
-                top: '-20px',
+                top: 'calc(50% - 50px)',
                 left: '50%',
-                transform: 'translateX(-50%)',
+                transform: 'translate(-50%, -50%)',
                 color: 'white',
                 textShadow: '1px 1px 2px black, -1px -1px 2px black, 1px -1px 2px black, -1px 1px 2px black',
                 fontSize: '14px',
