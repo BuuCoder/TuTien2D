@@ -48,7 +48,8 @@ const GameMap = () => {
         camX = Math.max(0, Math.min(camX, currentMap.width - viewportSize.width));
         camY = Math.max(0, Math.min(camY, currentMap.height - viewportSize.height));
 
-        setCameraOffset(camX, camY);
+        // Làm tròn camera offset để tránh subpixel rendering (gây rung)
+        setCameraOffset(Math.round(camX), Math.round(camY));
     }, [playerPosition.x, playerPosition.y, viewportSize.width, viewportSize.height, setCameraOffset, isMounted, currentMap.width, currentMap.height]);
 
     if (!isMounted) {
@@ -108,10 +109,15 @@ const GameMap = () => {
                     position: 'absolute',
                     width: `${currentMap.width}px`,
                     height: `${currentMap.height}px`,
-                    left: centeringOffsetX,
-                    top: centeringOffsetY,
-                    transform: `translate(${-cameraOffset.x}px, ${-cameraOffset.y}px)`,
+                    left: Math.round(centeringOffsetX),
+                    top: Math.round(centeringOffsetY),
+                    transform: `translate3d(${-cameraOffset.x}px, ${-cameraOffset.y}px, 0)`,
                     willChange: 'transform',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    perspective: 1000,
+                    WebkitPerspective: 1000,
+                    imageRendering: 'pixelated',
                     zIndex: 1,
                 }}
             >
@@ -125,6 +131,10 @@ const GameMap = () => {
                         backgroundImage: `url(${currentMap.background})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
+                        imageRendering: 'auto',
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        transform: 'translateZ(0)',
                         zIndex: 0,
                     }}
                 />

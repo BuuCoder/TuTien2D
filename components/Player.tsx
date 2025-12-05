@@ -129,6 +129,13 @@ const Player = () => {
                 newX = Math.max(32, Math.min(newX, mapData.width - 32));
                 newY = Math.max(32, Math.min(newY, mapData.height - 32));
 
+                // Làm tròn position để tránh subpixel rendering (gây rung khi dùng joystick)
+                // Chỉ làm tròn khi dùng joystick hoặc click-to-move (có decimal values)
+                if (currentJoystick || currentTarget) {
+                    newX = Math.round(newX);
+                    newY = Math.round(newY);
+                }
+
                 state.setPlayerPosition(newX, newY);
 
                 // Update direction based on movement
@@ -166,14 +173,17 @@ const Player = () => {
         <div
             style={{
                 position: 'absolute',
-                left: playerPosition.x,
-                top: playerPosition.y,
+                left: Math.round(playerPosition.x),
+                top: Math.round(playerPosition.y),
                 width: `${displaySize}px`,
                 height: `${displaySize}px`,
                 backgroundImage: `url(${gifPath})`,
                 backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',
                 transform: 'translate(-50%, -50%)',
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                imageRendering: 'pixelated',
                 zIndex: Math.floor(playerPosition.y), // Z-index based on Y position
             }}
         >
