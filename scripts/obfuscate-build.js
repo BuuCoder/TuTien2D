@@ -39,23 +39,45 @@ const OBFUSCATION_OPTIONS = {
     unicodeEscapeSequence: false
 };
 
+function shouldSkipFile(fileName) {
+    const skipPatterns = [
+        'turbopack',
+        '_turbopack',
+        'webpack-runtime',
+        'webpack',
+        'polyfill',
+        'framework',
+        'main-app'
+    ];
+    
+    return skipPatterns.some(pattern => fileName.toLowerCase().includes(pattern));
+}
+
 function obfuscateFile(filePath) {
     try {
+        const fileName = path.basename(filePath);
+        
+        // Skip system files
+        if (shouldSkipFile(fileName)) {
+            console.log(`[Obfuscate] Skipping (system file): ${fileName}`);
+            return false;
+        }
+        
         const code = fs.readFileSync(filePath, 'utf8');
         
         // Skip if already obfuscated
         if (code.includes('_0x')) {
-            console.log(`[Obfuscate] Skipping (already obfuscated): ${path.basename(filePath)}`);
+            console.log(`[Obfuscate] Skipping (already obfuscated): ${fileName}`);
             return false;
         }
         
-        console.log(`[Obfuscate] Processing: ${path.basename(filePath)}`);
+        console.log(`[Obfuscate] Processing: ${fileName}`);
         
         const obfuscated = JavaScriptObfuscator.obfuscate(code, OBFUSCATION_OPTIONS);
         
         fs.writeFileSync(filePath, obfuscated.getObfuscatedCode(), 'utf8');
         
-        console.log(`[Obfuscate] ✓ Done: ${path.basename(filePath)}`);
+        console.log(`[Obfuscate] ✓ Done: ${fileName}`);
         return true;
         
     } catch (error) {
@@ -68,21 +90,24 @@ function obfuscateFile(filePath) {
 function obfuscateDirectory(dir) {
     if (!fs.existsSync(dir)) {
         console.error(`[Obfuscate] Directory not found: ${dir}`);
-        return;
+        return 0;
     }
 
     const files = fs.readdirSync(dir);
     let processed = 0;
+    let skipped = 0;
 
     files.forEach(file => {
         const filePath = path.join(dir, file);
         const stat = fs.statSync(filePath);
 
         if (stat.isDirectory()) {
-            // Recursive
-            processed += obfuscateDirectory(filePath);
+            const result = obfuscateDirectory(filePath);
+            processed += result;
         } else if (file.endsWith('.js') && !file.includes('.map')) {
-            if (obfuscateFile(filePath)) {
+            if (shouldSkipFile(file)) {
+                skipped++;
+            } else if (obfuscateFile(filePath)) {
                 processed++;
             }
         }
