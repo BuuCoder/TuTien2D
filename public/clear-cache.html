@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Cache - Tu Tiên 2D</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            max-width: 500px;
+        }
+        h1 { margin-bottom: 20px; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover { background: #45a049; }
+        .danger { background: #f44336; }
+        .danger:hover { background: #da190b; }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            min-height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Clear Cache</h1>
+        <p>Nếu game gặp lỗi, hãy clear cache và reload</p>
+        
+        <button onclick="clearAllCaches()">Clear All Caches</button>
+        <button onclick="unregisterServiceWorker()" class="danger">Unregister Service Worker</button>
+        <button onclick="clearAndReload()">Clear & Reload Game</button>
+        
+        <div id="status">Sẵn sàng...</div>
+    </div>
+
+    <script>
+        const status = document.getElementById('status');
+
+        async function clearAllCaches() {
+            try {
+                status.textContent = '🔄 Đang xóa cache...';
+                
+                // Clear all caches
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+                
+                status.textContent = `✅ Đã xóa ${cacheNames.length} cache(s)`;
+                console.log('Cleared caches:', cacheNames);
+            } catch (error) {
+                status.textContent = '❌ Lỗi: ' + error.message;
+                console.error('Error clearing caches:', error);
+            }
+        }
+
+        async function unregisterServiceWorker() {
+            try {
+                status.textContent = '🔄 Đang unregister service worker...';
+                
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(reg => reg.unregister()));
+                    status.textContent = `✅ Đã unregister ${registrations.length} service worker(s)`;
+                } else {
+                    status.textContent = '⚠️ Browser không hỗ trợ Service Worker';
+                }
+            } catch (error) {
+                status.textContent = '❌ Lỗi: ' + error.message;
+                console.error('Error unregistering SW:', error);
+            }
+        }
+
+        async function clearAndReload() {
+            try {
+                status.textContent = '🔄 Đang clear cache và reload...';
+                
+                // Clear caches
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+                
+                // Unregister service workers
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(reg => reg.unregister()));
+                }
+                
+                // Clear localStorage
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                status.textContent = '✅ Đã clear! Đang reload...';
+                
+                // Reload after 1 second
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
+            } catch (error) {
+                status.textContent = '❌ Lỗi: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

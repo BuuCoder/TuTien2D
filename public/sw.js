@@ -1,7 +1,8 @@
 // Service Worker for PWA
-const CACHE_NAME = 'tutien2d-v1';
-const STATIC_CACHE = 'tutien2d-static-v1';
-const DYNAMIC_CACHE = 'tutien2d-dynamic-v1';
+const CACHE_VERSION = '2'; // Tăng version để force clear cache
+const CACHE_NAME = `tutien2d-v${CACHE_VERSION}`;
+const STATIC_CACHE = `tutien2d-static-v${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `tutien2d-dynamic-v${CACHE_VERSION}`;
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -52,6 +53,12 @@ self.addEventListener('fetch', (event) => {
 
   // Skip socket.io
   if (url.pathname.includes('socket.io')) {
+    return;
+  }
+
+  // QUAN TRỌNG: Skip Next.js chunks để tránh cache file lỗi
+  if (url.pathname.includes('/_next/static/chunks/')) {
+    event.respondWith(fetch(request)); // Always fetch fresh
     return;
   }
 

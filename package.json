@@ -6,7 +6,8 @@
     "dev": "node server.js",
     "build": "next build",
     "build:clean": "next build",
-    "build:obfuscate": "next build && node scripts/obfuscate-build.js",
+    "build:obfuscate": "next build && node scripts/obfuscate-server.js",
+    "build:obfuscate-all": "next build && node scripts/obfuscate-build.js",
     "start": "cross-env NODE_ENV=production node server.js",
     "lint": "eslint",
     "monitor": "node scripts/monitor-performance.js"
