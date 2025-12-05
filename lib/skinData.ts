@@ -18,6 +18,7 @@ export interface SkinData {
     isDefault: boolean;
     stats?: SkinStats;        // Bonus stats từ skin
     displaySize?: number;     // Kích thước hiển thị (px), mặc định 64
+    centerOffset?: { x: number; y: number }; // Offset từ góc trên-trái đến trung tâm thực sự của nhân vật
 }
 
 export const SKINS: Record<string, SkinData> = {
@@ -69,7 +70,7 @@ export const SKINS: Record<string, SkinData> = {
         rarity: 'epic',
         isDefault: false,
         displaySize: 300,        // Kích thước lớn hơn để hiển thị chi tiết
-        // centerOffset: { x: 0, y: 118 }, // Tạm comment để test
+        centerOffset: { x: 0, y: 118 }, // Trung tâm thực sự của nhân vật (chân nhân vật, (300-64)/2 = 118)
         stats: {
             attackBonus: 300,    // +300% Attack
             maxHpBonus: 20,      // +20% HP

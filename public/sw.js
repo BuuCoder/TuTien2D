@@ -7,6 +7,7 @@ const DYNAMIC_CACHE = 'tutien2d-dynamic-v1';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
+  '/icon.svg',
 ];
 
 // Install event - cache static assets
