@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { useGameStore } from '@/lib/store';
 import { calculatePlayerDistance } from '@/lib/skinHelper';
 
@@ -20,19 +20,21 @@ interface MonsterProps {
     goldDrop?: number;
 }
 
-const Monster: React.FC<MonsterProps> = ({
-    monsterId,
-    name,
-    level,
-    hp,
-    maxHp,
-    x,
-    y,
-    sprite,
-    aggroRange,
-    isDead,
-    goldDrop
-}) => {
+const Monster: React.FC<MonsterProps> = memo((props) => {
+    const {
+        monsterId,
+        name,
+        level,
+        hp,
+        maxHp,
+        x,
+        y,
+        sprite,
+        aggroRange,
+        isDead,
+        goldDrop
+    } = props;
+
     const { socket, addDamageIndicator } = useGameStore();
     const lastAttackRef = useRef(0);
 
@@ -45,7 +47,7 @@ const Monster: React.FC<MonsterProps> = ({
             const state = useGameStore.getState();
             const currentPlayerPos = state.playerPosition;
             const currentSkin = state.user?.skin || 'knight';
-            
+
             // Tính khoảng cách từ trung tâm thực sự của nhân vật
             const distance = calculatePlayerDistance(
                 currentSkin,
@@ -65,7 +67,7 @@ const Monster: React.FC<MonsterProps> = ({
                 const now = Date.now();
                 if (now - lastAttackRef.current > 3000) { // Attack every 3s
                     lastAttackRef.current = now;
-                    
+
                     socket.emit('monster_attack', {
                         monsterId,
                         targetSocketId: socket.id
@@ -183,6 +185,19 @@ const Monster: React.FC<MonsterProps> = ({
             )}
         </div>
     );
-};
+}, (prevProps, nextProps) => {
+    // Custom comparison - only re-render if monster's own properties change
+    return (
+        prevProps.monsterId === nextProps.monsterId &&
+        prevProps.x === nextProps.x &&
+        prevProps.y === nextProps.y &&
+        prevProps.hp === nextProps.hp &&
+        prevProps.isDead === nextProps.isDead &&
+        prevProps.goldDrop === nextProps.goldDrop
+    );
+});
+
+Monster.displayName = 'Monster';
 
 export default Monster;
+

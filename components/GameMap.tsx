@@ -15,9 +15,11 @@ const GameMap = () => {
     const { currentMapId, playerPosition, cameraOffset, setCameraOffset, monsters } = useGameStore();
     const [viewportSize, setViewportSize] = useState({ width: 800, height: 600 });
     const [isMounted, setIsMounted] = useState(false);
-    
+
     const currentMap = useMemo(() => MAPS[currentMapId] || MAPS['map1'], [currentMapId]);
 
+    // Memoize monsters array to prevent re-creating on every render
+    const monstersArray = useMemo(() => Array.from(monsters.values()), [monsters]);
 
 
     useEffect(() => {
@@ -39,8 +41,8 @@ const GameMap = () => {
         };
     }, []);
 
-    useEffect(() => {
-        if (!isMounted) return;
+    const calculatedCameraOffset = useMemo(() => {
+        if (!isMounted) return { x: 0, y: 0 };
 
         let camX = playerPosition.x - viewportSize.width / 2;
         let camY = playerPosition.y - viewportSize.height / 2;
@@ -48,8 +50,12 @@ const GameMap = () => {
         camX = Math.max(0, Math.min(camX, currentMap.width - viewportSize.width));
         camY = Math.max(0, Math.min(camY, currentMap.height - viewportSize.height));
 
-        setCameraOffset(camX, camY);
-    }, [playerPosition.x, playerPosition.y, viewportSize.width, viewportSize.height, setCameraOffset, isMounted, currentMap.width, currentMap.height]);
+        return { x: camX, y: camY };
+    }, [playerPosition.x, playerPosition.y, viewportSize.width, viewportSize.height, isMounted, currentMap.width, currentMap.height]);
+
+    useEffect(() => {
+        setCameraOffset(calculatedCameraOffset.x, calculatedCameraOffset.y);
+    }, [calculatedCameraOffset, setCameraOffset]);
 
     if (!isMounted) {
         return (
@@ -110,7 +116,7 @@ const GameMap = () => {
                     height: `${currentMap.height}px`,
                     left: -cameraOffset.x + centeringOffsetX,
                     top: -cameraOffset.y + centeringOffsetY,
-                    transition: 'left 0.1s ease-out, top 0.1s ease-out',
+                    willChange: 'transform',
                     zIndex: 1,
                 }}
             >
@@ -153,24 +159,24 @@ const GameMap = () => {
                 ))}
 
                 {/* Render Monsters */}
-                {Array.from(monsters.values()).map((monster) => (
+                {monstersArray.map((monster) => (
                     <Monster
-                            key={monster.monsterId}
-                            monsterId={monster.monsterId}
-                            name={monster.name}
-                            level={monster.level}
-                            hp={monster.hp}
-                            maxHp={monster.maxHp}
-                            attack={monster.attack}
-                            x={monster.x}
-                            y={monster.y}
-                            sprite={monster.sprite || "/assets/monster/monster.gif"}
-                            aggroRange={monster.aggroRange || 150}
-                            attackRange={monster.attackRange || 80}
-                            isDead={monster.isDead || false}
-                            goldDrop={monster.goldDrop}
-                        />
-                    ))}
+                        key={monster.monsterId}
+                        monsterId={monster.monsterId}
+                        name={monster.name}
+                        level={monster.level}
+                        hp={monster.hp}
+                        maxHp={monster.maxHp}
+                        attack={monster.attack}
+                        x={monster.x}
+                        y={monster.y}
+                        sprite={monster.sprite || "/assets/monster/monster.gif"}
+                        aggroRange={monster.aggroRange || 150}
+                        attackRange={monster.attackRange || 80}
+                        isDead={monster.isDead || false}
+                        goldDrop={monster.goldDrop}
+                    />
+                ))}
 
                 <OtherPlayers />
                 <Player />

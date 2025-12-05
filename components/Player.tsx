@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, memo } from 'react';
 import { useGameStore } from '@/lib/store';
 import { MAPS } from '@/lib/gameData';
 import { calculatePlayerSpeed } from '@/lib/skinStatsHelper';
@@ -29,11 +29,11 @@ const Player = () => {
 
     // Get current skin from user data, default to 'knight'
     const currentSkin = user?.skin || 'knight';
-    
+
     // Get skin data for display size
     const skinData = useMemo(() => getSkinById(currentSkin), [currentSkin]);
     const displaySize = skinData?.displaySize || 64; // Mặc định 64px
-    
+
     // Calculate speed with skin bonus
     const SPEED = useMemo(() => calculatePlayerSpeed(currentSkin), [currentSkin]);
 
@@ -181,4 +181,4 @@ const Player = () => {
     );
 };
 
-export default Player;
+export default memo(Player);
