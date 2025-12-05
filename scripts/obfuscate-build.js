@@ -49,7 +49,16 @@ function shouldSkipFile(fileName) {
         'webpack',
         'polyfill',
         'framework',
-        'main-app'
+        'main-app',
+        'react-refresh',
+        'app-pages-internals',
+        'app-',
+        'pages-',
+        '_app',
+        '_document',
+        '_error',
+        'middleware',
+        'instrumentation'
     ];
     
     return skipPatterns.some(pattern => fileName.toLowerCase().includes(pattern));
