@@ -40,6 +40,7 @@ const Player = () => {
     const keysPressed = useRef<Set<string>>(new Set());
     const animationFrameId = useRef<number | null>(null);
 
+    // Setup keyboard listeners (only once)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Không di chuyển nếu đang gõ trong input hoặc textarea
@@ -57,8 +58,23 @@ const Player = () => {
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
 
-        // Game Loop
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+
+    // Game Loop (only setup once, reads from store directly)
+    useEffect(() => {
         const gameLoop = () => {
+            // Get fresh state from store every frame
+            const state = useGameStore.getState();
+            const currentPlayerPos = state.playerPosition;
+            const currentJoystick = state.joystickDirection;
+            const currentTarget = state.targetPosition;
+            const currentAction = state.playerAction;
+            const mapData = MAPS[state.currentMapId] || MAPS['map1'];
+
             let dx = 0;
             let dy = 0;
             let hasManualInput = false;
@@ -70,17 +86,18 @@ const Player = () => {
             if (keys.has('a') || keys.has('arrowleft')) { dx -= SPEED; hasManualInput = true; }
             if (keys.has('d') || keys.has('arrowright')) { dx += SPEED; hasManualInput = true; }
 
-            // Joystick input (for mobile)
-            if (joystickDirection) {
-                dx += joystickDirection.x * SPEED;
-                dy += joystickDirection.y * SPEED;
+            // Joystick input (for mobile) - 1.3x multiplier để match WASD speed
+            if (currentJoystick) {
+                const joystickMultiplier = 1.3;
+                dx += currentJoystick.x * SPEED * joystickMultiplier;
+                dy += currentJoystick.y * SPEED * joystickMultiplier;
                 hasManualInput = true;
             }
 
             // Click-to-move: if no manual input and target exists
-            if (!hasManualInput && targetPosition) {
-                const distX = targetPosition.x - playerPosition.x;
-                const distY = targetPosition.y - playerPosition.y;
+            if (!hasManualInput && currentTarget) {
+                const distX = currentTarget.x - currentPlayerPos.x;
+                const distY = currentTarget.y - currentPlayerPos.y;
                 const distance = Math.sqrt(distX * distX + distY * distY);
 
                 if (distance > TARGET_THRESHOLD) {
@@ -90,15 +107,14 @@ const Player = () => {
                     dy = (distY / distance) * clickSpeed;
                 } else {
                     // Reached target
-                    setTargetPosition(null);
+                    state.setTargetPosition(null);
                 }
-            } else if (hasManualInput && targetPosition) {
+            } else if (hasManualInput && currentTarget) {
                 // Cancel click-to-move if manual input
-                setTargetPosition(null);
+                state.setTargetPosition(null);
             }
 
             if (dx !== 0 || dy !== 0) {
-
                 // Normalize diagonal movement
                 if (dx !== 0 && dy !== 0) {
                     const factor = 1 / Math.sqrt(2);
@@ -106,27 +122,27 @@ const Player = () => {
                     dy *= factor;
                 }
 
-                let newX = playerPosition.x + dx;
-                let newY = playerPosition.y + dy;
+                let newX = currentPlayerPos.x + dx;
+                let newY = currentPlayerPos.y + dy;
 
                 // Clamp to map boundaries
-                newX = Math.max(32, Math.min(newX, currentMap.width - 32));
-                newY = Math.max(32, Math.min(newY, currentMap.height - 32));
+                newX = Math.max(32, Math.min(newX, mapData.width - 32));
+                newY = Math.max(32, Math.min(newY, mapData.height - 32));
 
-                setPlayerPosition(newX, newY);
+                state.setPlayerPosition(newX, newY);
 
                 // Update direction based on movement
                 if (Math.abs(dx) > Math.abs(dy)) {
-                    setDirection(dx > 0 ? 'right' : 'left');
+                    state.setPlayerDirection(dx > 0 ? 'right' : 'left');
                 } else {
-                    setDirection(dy > 0 ? 'down' : 'up');
+                    state.setPlayerDirection(dy > 0 ? 'down' : 'up');
                 }
             }
 
             // Update action in store
             const newAction = (dx !== 0 || dy !== 0) ? 'run' : 'idle';
-            if (newAction !== playerAction) {
-                setPlayerAction(newAction);
+            if (newAction !== currentAction) {
+                state.setPlayerAction(newAction);
             }
 
             animationFrameId.current = requestAnimationFrame(gameLoop);
@@ -135,13 +151,11 @@ const Player = () => {
         animationFrameId.current = requestAnimationFrame(gameLoop);
 
         return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
             if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [playerPosition, setPlayerPosition, joystickDirection, targetPosition, setTargetPosition, setDirection, setPlayerAction, playerAction, currentMap.width, currentMap.height, SPEED]);
+    }, [SPEED]); // Only restart if SPEED changes (skin change)
 
     // When idle, always use down_idle regardless of direction
     const gifPath = playerAction === 'idle'

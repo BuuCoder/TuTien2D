@@ -220,6 +220,8 @@ const MultiplayerManager = () => {
     // Broadcast player movement with throttling using ref
     const lastBroadcastTime = React.useRef(0);
     const lastAction = React.useRef(playerAction);
+    const lastBroadcastPosition = React.useRef({ x: playerPosition.x, y: playerPosition.y });
+    const broadcastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
     
     useEffect(() => {
         if (!socket || !isConnected || !currentChannel) return;
@@ -227,29 +229,63 @@ const MultiplayerManager = () => {
         const now = Date.now();
         const timeSinceLastBroadcast = now - lastBroadcastTime.current;
         const actionChanged = lastAction.current !== playerAction;
-
-        // Always broadcast if action changed (idle/run), otherwise throttle
-        if (!actionChanged && timeSinceLastBroadcast < 50) {
-            return;
-        }
-
-        lastBroadcastTime.current = now;
-        lastAction.current = playerAction;
         
-        // Log when action changes
-        if (actionChanged) {
+        // Calculate distance moved since last broadcast
+        const dx = playerPosition.x - lastBroadcastPosition.current.x;
+        const dy = playerPosition.y - lastBroadcastPosition.current.y;
+        const distanceMoved = Math.sqrt(dx * dx + dy * dy);
+        
+        // Broadcast immediately if:
+        // 1. Action changed (idle <-> run)
+        // 2. Moved significant distance (>10px) and enough time passed (100ms)
+        const shouldBroadcastImmediately = actionChanged || (distanceMoved > 10 && timeSinceLastBroadcast >= 100);
+        
+        if (shouldBroadcastImmediately) {
+            // Clear any pending broadcast
+            if (broadcastTimeoutRef.current) {
+                clearTimeout(broadcastTimeoutRef.current);
+                broadcastTimeoutRef.current = null;
+            }
             
+            lastBroadcastTime.current = now;
+            lastAction.current = playerAction;
+            lastBroadcastPosition.current = { x: playerPosition.x, y: playerPosition.y };
+            
+            socket.emit('player_move', {
+                x: playerPosition.x,
+                y: playerPosition.y,
+                direction: playerDirection,
+                action: playerAction,
+                mapId: currentMapId,
+                skin: user?.skin || 'knight'
+            });
+        } else if (playerAction === 'run' && !broadcastTimeoutRef.current) {
+            // Schedule a broadcast for smooth movement (every 150ms while running)
+            broadcastTimeoutRef.current = setTimeout(() => {
+                if (socket && isConnected && currentChannel) {
+                    lastBroadcastTime.current = Date.now();
+                    lastAction.current = playerAction;
+                    lastBroadcastPosition.current = { x: playerPosition.x, y: playerPosition.y };
+                    
+                    socket.emit('player_move', {
+                        x: playerPosition.x,
+                        y: playerPosition.y,
+                        direction: playerDirection,
+                        action: playerAction,
+                        mapId: currentMapId,
+                        skin: user?.skin || 'knight'
+                    });
+                }
+                broadcastTimeoutRef.current = null;
+            }, 150);
         }
         
-        socket.emit('player_move', {
-            x: playerPosition.x,
-            y: playerPosition.y,
-            direction: playerDirection,
-            action: playerAction,
-            mapId: currentMapId,
-            skin: user?.skin || 'knight'
-        });
-    }, [playerPosition, playerDirection, playerAction, currentMapId, socket, isConnected, currentChannel]);
+        return () => {
+            if (broadcastTimeoutRef.current) {
+                clearTimeout(broadcastTimeoutRef.current);
+            }
+        };
+    }, [playerPosition, playerDirection, playerAction, currentMapId, socket, isConnected, currentChannel, user?.skin]);
 
     return null;
 };

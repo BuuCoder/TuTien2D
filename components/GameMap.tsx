@@ -108,9 +108,10 @@ const GameMap = () => {
                     position: 'absolute',
                     width: `${currentMap.width}px`,
                     height: `${currentMap.height}px`,
-                    left: -cameraOffset.x + centeringOffsetX,
-                    top: -cameraOffset.y + centeringOffsetY,
-                    transition: 'left 0.1s ease-out, top 0.1s ease-out',
+                    left: centeringOffsetX,
+                    top: centeringOffsetY,
+                    transform: `translate(${-cameraOffset.x}px, ${-cameraOffset.y}px)`,
+                    willChange: 'transform',
                     zIndex: 1,
                 }}
             >

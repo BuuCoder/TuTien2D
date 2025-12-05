@@ -236,25 +236,29 @@ app.prepare().then(() => {
             // Rate limiting
             const rateCheck = rateLimiter.check(userId, 'player_move');
             if (!rateCheck.allowed) {
-                socket.emit('error', rateCheck.reason);
+                // Không emit error để tránh spam, chỉ log
+                console.log(`[RateLimit] ${username} movement throttled`);
                 return;
             }
 
-            // Validate position
-            const posCheck = validator.validatePosition(data.x, data.y, 2000, 2000);
-            if (!posCheck.valid) {
-                console.log(`[Security] Invalid position from ${username}: ${posCheck.reason}`);
+            // Validate position (chỉ check bounds, bỏ validation phức tạp)
+            if (data.x < 0 || data.x > 2000 || data.y < 0 || data.y > 2000) {
+                console.log(`[Security] Invalid position from ${username}: out of bounds`);
                 return;
             }
 
-            // Validate movement speed (chống teleport)
+            // Validate movement speed (chống teleport) - chỉ check nếu di chuyển quá xa
             const now = Date.now();
             const deltaTime = now - lastMoveTime;
-            if (deltaTime > 10) { // Chỉ check nếu > 10ms
-                const moveCheck = validator.validateMovement(lastPosition, data, 10, deltaTime);
-                if (!moveCheck.valid) {
-                    console.log(`[Security] Suspicious movement from ${username}: ${moveCheck.reason}`);
-                    // Không return, chỉ log để tránh false positive do lag
+            if (deltaTime > 50) { // Chỉ check nếu > 50ms để tránh false positive
+                const dx = data.x - lastPosition.x;
+                const dy = data.y - lastPosition.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const maxDistance = 15 * (deltaTime / 16.67); // 15px/frame * số frames
+                
+                if (distance > maxDistance) {
+                    console.log(`[Security] Suspicious movement from ${username}: ${distance.toFixed(1)}px in ${deltaTime}ms`);
+                    // Không return, chỉ log
                 }
             }
 

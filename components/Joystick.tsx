@@ -13,6 +13,9 @@ const Joystick = () => {
     const [knobPosition, setKnobPosition] = useState({ x: 0, y: 0 });
     const [isMobile, setIsMobile] = useState(false);
     const joystickRef = useRef<HTMLDivElement>(null);
+    const lastUpdateTime = useRef(0);
+    const animationFrameRef = useRef<number | null>(null);
+    const pendingPosition = useRef<{ clientX: number; clientY: number } | null>(null);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -25,21 +28,42 @@ const Joystick = () => {
 
     const handleStart = (clientX: number, clientY: number) => {
         setIsDragging(true);
-        updateKnobPosition(clientX, clientY);
+        updateKnobPositionImmediate(clientX, clientY);
     };
 
     const handleMove = (clientX: number, clientY: number) => {
         if (!isDragging) return;
-        updateKnobPosition(clientX, clientY);
+        
+        // Store pending position for RAF
+        pendingPosition.current = { clientX, clientY };
+        
+        // Use requestAnimationFrame for smooth updates
+        if (!animationFrameRef.current) {
+            animationFrameRef.current = requestAnimationFrame(() => {
+                if (pendingPosition.current) {
+                    updateKnobPositionImmediate(
+                        pendingPosition.current.clientX,
+                        pendingPosition.current.clientY
+                    );
+                    pendingPosition.current = null;
+                }
+                animationFrameRef.current = null;
+            });
+        }
     };
 
     const handleEnd = () => {
         setIsDragging(false);
         setKnobPosition({ x: 0, y: 0 });
         setJoystickDirection(null);
+        pendingPosition.current = null;
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
     };
 
-    const updateKnobPosition = (clientX: number, clientY: number) => {
+    const updateKnobPositionImmediate = (clientX: number, clientY: number) => {
         if (!joystickRef.current) return;
 
         const rect = joystickRef.current.getBoundingClientRect();
@@ -57,12 +81,19 @@ const Joystick = () => {
             deltaY = Math.sin(angle) * MAX_DISTANCE;
         }
 
+        // Always update visual position immediately for responsive feel
         setKnobPosition({ x: deltaX, y: deltaY });
 
-        const normalizedX = deltaX / MAX_DISTANCE;
-        const normalizedY = deltaY / MAX_DISTANCE;
+        // Throttle direction updates to store (for movement)
+        const now = Date.now();
+        if (now - lastUpdateTime.current >= 16) { // ~60fps max
+            lastUpdateTime.current = now;
+            
+            const normalizedX = deltaX / MAX_DISTANCE;
+            const normalizedY = deltaY / MAX_DISTANCE;
 
-        setJoystickDirection({ x: normalizedX, y: normalizedY });
+            setJoystickDirection({ x: normalizedX, y: normalizedY });
+        }
     };
 
     useEffect(() => {
@@ -104,22 +135,46 @@ const Joystick = () => {
         joystick.addEventListener('touchstart', handleTouchStart, { passive: false });
         joystick.addEventListener('touchmove', handleTouchMove, { passive: false });
         joystick.addEventListener('touchend', handleTouchEnd, { passive: false });
+        joystick.addEventListener('touchcancel', handleTouchEnd, { passive: false });
         joystick.addEventListener('mousedown', handleMouseDown);
 
         if (isDragging) {
             window.addEventListener('mousemove', handleMouseMove);
             window.addEventListener('mouseup', handleMouseUp);
+            window.addEventListener('touchmove', handleTouchMove, { passive: false });
+            window.addEventListener('touchend', handleTouchEnd, { passive: false });
+            window.addEventListener('touchcancel', handleTouchEnd, { passive: false });
         }
 
         return () => {
             joystick.removeEventListener('touchstart', handleTouchStart);
             joystick.removeEventListener('touchmove', handleTouchMove);
             joystick.removeEventListener('touchend', handleTouchEnd);
+            joystick.removeEventListener('touchcancel', handleTouchEnd);
             joystick.removeEventListener('mousedown', handleMouseDown);
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('touchmove', handleTouchMove);
+            window.removeEventListener('touchend', handleTouchEnd);
+            window.removeEventListener('touchcancel', handleTouchEnd);
         };
     }, [isDragging, isMobile]);
+
+    // Reset joystick khi component unmount hoặc khi map thay đổi
+    const currentMapId = useGameStore((state) => state.currentMapId);
+    useEffect(() => {
+        return () => {
+            // Force reset khi unmount
+            setIsDragging(false);
+            setKnobPosition({ x: 0, y: 0 });
+            setJoystickDirection(null);
+            pendingPosition.current = null;
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = null;
+            }
+        };
+    }, [currentMapId, setJoystickDirection]);
 
     // Ẩn joystick trên desktop
     if (!isMobile) return null;
