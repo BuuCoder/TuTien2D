@@ -11,11 +11,15 @@ import { getSkinById } from './skinData';
  */
 export const getPlayerCenter = (skinId: string, x: number, y: number): { x: number; y: number } => {
     const skinData = getSkinById(skinId);
-    const offset = skinData?.centerOffset || { x: 0, y: 0 };
+    const displaySize = skinData?.displaySize || 64;
+    
+    // Tính offset: (displaySize - 64) / 2
+    // Với assassin: (300 - 64) / 2 = 118
+    const offsetY = (displaySize - 64) / 2;
     
     return {
-        x: x + offset.x,
-        y: y + offset.y
+        x: x,
+        y: y + offsetY
     };
 };
 
