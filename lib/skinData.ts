@@ -17,6 +17,7 @@ export interface SkinData {
     rarity: 'common' | 'rare' | 'epic' | 'legendary';
     isDefault: boolean;
     stats?: SkinStats;        // Bonus stats từ skin
+    displaySize?: number;     // Kích thước hiển thị (px), mặc định 64
 }
 
 export const SKINS: Record<string, SkinData> = {
@@ -67,6 +68,7 @@ export const SKINS: Record<string, SkinData> = {
         assetPath: '/assets/assassin',
         rarity: 'epic',
         isDefault: false,
+        displaySize: 300,        // Kích thước lớn hơn để hiển thị chi tiết
         stats: {
             attackBonus: 300,    // +300% Attack
             maxHpBonus: 20,      // +20% HP

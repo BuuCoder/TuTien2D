@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '@/lib/store';
 import { MAPS } from '@/lib/gameData';
 import { calculatePlayerSpeed } from '@/lib/skinStatsHelper';
+import { getSkinById } from '@/lib/skinData';
 
 const TARGET_THRESHOLD = 10; // Distance to consider target reached
 
@@ -28,6 +29,10 @@ const Player = () => {
 
     // Get current skin from user data, default to 'knight'
     const currentSkin = user?.skin || 'knight';
+    
+    // Get skin data for display size
+    const skinData = useMemo(() => getSkinById(currentSkin), [currentSkin]);
+    const displaySize = skinData?.displaySize || 64; // Mặc định 64px
     
     // Calculate speed with skin bonus
     const SPEED = useMemo(() => calculatePlayerSpeed(currentSkin), [currentSkin]);
@@ -149,8 +154,8 @@ const Player = () => {
                 position: 'absolute',
                 left: playerPosition.x,
                 top: playerPosition.y,
-                width: '64px',
-                height: '64px',
+                width: `${displaySize}px`,
+                height: `${displaySize}px`,
                 backgroundImage: `url(${gifPath})`,
                 backgroundSize: 'contain',
                 backgroundRepeat: 'no-repeat',

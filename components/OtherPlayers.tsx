@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useGameStore } from '@/lib/store';
+import { getSkinById } from '@/lib/skinData';
 
 const NEARBY_DISTANCE = 100; // pixels
 
@@ -51,6 +52,10 @@ const OtherPlayers = () => {
                 .map((player) => {
                 // Get player's skin, default to 'knight'
                 const playerSkin = (player as any).skin || 'knight';
+                
+                // Get skin data for display size
+                const skinData = getSkinById(playerSkin);
+                const displaySize = skinData?.displaySize || 64; // Mặc định 64px
 
                 // Force GIF reload when action changes by adding timestamp
                 const gifPath = player.action === 'idle'
@@ -78,8 +83,8 @@ const OtherPlayers = () => {
                             position: 'absolute',
                             left: player.x,
                             top: player.y,
-                            width: '64px',
-                            height: '64px',
+                            width: `${displaySize}px`,
+                            height: `${displaySize}px`,
                             backgroundImage: `url(${gifWithCache})`,
                             backgroundSize: 'contain',
                             backgroundRepeat: 'no-repeat',
