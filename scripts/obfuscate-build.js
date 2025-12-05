@@ -9,33 +9,35 @@ const path = require('path');
 
 const BUILD_DIR = path.join(__dirname, '..', '.next', 'static', 'chunks');
 
-// Obfuscation options
+// Obfuscation options - Safer settings for Next.js
 const OBFUSCATION_OPTIONS = {
     compact: true,
-    controlFlowFlattening: true,
-    controlFlowFlatteningThreshold: 0.75,
-    deadCodeInjection: true,
-    deadCodeInjectionThreshold: 0.4,
+    controlFlowFlattening: false, // Tắt để tránh lỗi với getter/setter
+    controlFlowFlatteningThreshold: 0,
+    deadCodeInjection: false, // Tắt để tránh lỗi runtime
+    deadCodeInjectionThreshold: 0,
     debugProtection: false,
     disableConsoleOutput: true,
     identifierNamesGenerator: 'hexadecimal',
     log: false,
-    numbersToExpressions: true,
+    numbersToExpressions: false, // Tắt để tránh lỗi
     renameGlobals: false,
-    selfDefending: true,
+    selfDefending: false, // Tắt để tránh crash
     simplify: true,
     splitStrings: true,
     splitStringsChunkLength: 10,
     stringArray: true,
-    stringArrayCallsTransform: true,
+    stringArrayCallsTransform: false, // Tắt để tránh lỗi
     stringArrayEncoding: ['base64'],
     stringArrayIndexShift: true,
     stringArrayRotate: true,
     stringArrayShuffle: true,
-    stringArrayWrappersCount: 2,
-    stringArrayWrappersChainedCalls: true,
-    stringArrayThreshold: 0.75,
-    transformObjectKeys: true,
+    stringArrayWrappersCount: 1,
+    stringArrayWrappersChainedCalls: false,
+    stringArrayWrappersParametersMaxCount: 2,
+    stringArrayWrappersType: 'function',
+    stringArrayThreshold: 0.5,
+    transformObjectKeys: false, // QUAN TRỌNG: Tắt để tránh lỗi getter/setter
     unicodeEscapeSequence: false
 };
 
