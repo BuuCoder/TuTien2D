@@ -16,6 +16,8 @@ const Joystick = () => {
     const lastUpdateTime = useRef(0);
     const animationFrameRef = useRef<number | null>(null);
     const pendingPosition = useRef<{ clientX: number; clientY: number } | null>(null);
+    const smoothedDirection = useRef({ x: 0, y: 0 });
+    const SMOOTHING_FACTOR = 0.3; // Lower = smoother but more lag, Higher = more responsive
 
     useEffect(() => {
         const checkMobile = () => {
@@ -56,6 +58,7 @@ const Joystick = () => {
         setIsDragging(false);
         setKnobPosition({ x: 0, y: 0 });
         setJoystickDirection(null);
+        smoothedDirection.current = { x: 0, y: 0 }; // Reset smoothing
         pendingPosition.current = null;
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
@@ -92,7 +95,16 @@ const Joystick = () => {
             const normalizedX = deltaX / MAX_DISTANCE;
             const normalizedY = deltaY / MAX_DISTANCE;
 
-            setJoystickDirection({ x: normalizedX, y: normalizedY });
+            // Apply smoothing/interpolation for smoother movement
+            smoothedDirection.current.x += (normalizedX - smoothedDirection.current.x) * SMOOTHING_FACTOR;
+            smoothedDirection.current.y += (normalizedY - smoothedDirection.current.y) * SMOOTHING_FACTOR;
+
+            // Deadzone - ignore very small values
+            const deadzone = 0.05;
+            const finalX = Math.abs(smoothedDirection.current.x) < deadzone ? 0 : smoothedDirection.current.x;
+            const finalY = Math.abs(smoothedDirection.current.y) < deadzone ? 0 : smoothedDirection.current.y;
+
+            setJoystickDirection({ x: finalX, y: finalY });
         }
     };
 

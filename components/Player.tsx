@@ -39,6 +39,7 @@ const Player = () => {
 
     const keysPressed = useRef<Set<string>>(new Set());
     const animationFrameId = useRef<number | null>(null);
+    const lastFrameTime = useRef<number>(performance.now());
 
     // Setup keyboard listeners (only once)
     useEffect(() => {
@@ -66,7 +67,14 @@ const Player = () => {
 
     // Game Loop (only setup once, reads from store directly)
     useEffect(() => {
-        const gameLoop = () => {
+        const gameLoop = (currentTime: number) => {
+            // Calculate delta time for frame-independent movement
+            const deltaTime = (currentTime - lastFrameTime.current) / 16.67; // Normalize to 60fps
+            lastFrameTime.current = currentTime;
+            
+            // Clamp delta time to prevent huge jumps (e.g., when tab is inactive)
+            const clampedDelta = Math.min(deltaTime, 3);
+
             // Get fresh state from store every frame
             const state = useGameStore.getState();
             const currentPlayerPos = state.playerPosition;
@@ -81,16 +89,16 @@ const Player = () => {
 
             // Keyboard input
             const keys = keysPressed.current;
-            if (keys.has('w') || keys.has('arrowup')) { dy -= SPEED; hasManualInput = true; }
-            if (keys.has('s') || keys.has('arrowdown')) { dy += SPEED; hasManualInput = true; }
-            if (keys.has('a') || keys.has('arrowleft')) { dx -= SPEED; hasManualInput = true; }
-            if (keys.has('d') || keys.has('arrowright')) { dx += SPEED; hasManualInput = true; }
+            if (keys.has('w') || keys.has('arrowup')) { dy -= SPEED * clampedDelta; hasManualInput = true; }
+            if (keys.has('s') || keys.has('arrowdown')) { dy += SPEED * clampedDelta; hasManualInput = true; }
+            if (keys.has('a') || keys.has('arrowleft')) { dx -= SPEED * clampedDelta; hasManualInput = true; }
+            if (keys.has('d') || keys.has('arrowright')) { dx += SPEED * clampedDelta; hasManualInput = true; }
 
             // Joystick input (for mobile) - 1.3x multiplier để match WASD speed
             if (currentJoystick) {
                 const joystickMultiplier = 1.3;
-                dx += currentJoystick.x * SPEED * joystickMultiplier;
-                dy += currentJoystick.y * SPEED * joystickMultiplier;
+                dx += currentJoystick.x * SPEED * joystickMultiplier * clampedDelta;
+                dy += currentJoystick.y * SPEED * joystickMultiplier * clampedDelta;
                 hasManualInput = true;
             }
 
@@ -102,7 +110,7 @@ const Player = () => {
 
                 if (distance > TARGET_THRESHOLD) {
                     // Normalize and apply speed (1.2x faster for smoother feel)
-                    const clickSpeed = SPEED * 1.2;
+                    const clickSpeed = SPEED * 1.2 * clampedDelta;
                     dx = (distX / distance) * clickSpeed;
                     dy = (distY / distance) * clickSpeed;
                 } else {
