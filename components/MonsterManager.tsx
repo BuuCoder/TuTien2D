@@ -24,31 +24,56 @@ const MonsterManager = () => {
         };
 
         const handleMonsterUpdated = (data: any) => {
-            updateMonster(data.monsterId, data);
+            // Chỉ update nếu monster thuộc map hiện tại
+            const state = useGameStore.getState();
+            const currentMap = state.currentMapId;
+            const monsterMapId = data.monsterId.split('-')[0];
+            
+            if (monsterMapId === currentMap) {
+                updateMonster(data.monsterId, data);
+            }
         };
 
         const handleMonsterDied = (data: any) => {
-            updateMonster(data.monsterId, {
-                isDead: true,
-                hp: 0,
-                goldDrop: data.goldDrop
-            });
+            // Chỉ update nếu monster thuộc map hiện tại
+            const state = useGameStore.getState();
+            const currentMap = state.currentMapId;
+            const monsterMapId = data.monsterId.split('-')[0];
+            
+            if (monsterMapId === currentMap) {
+                updateMonster(data.monsterId, {
+                    isDead: true,
+                    hp: 0,
+                    goldDrop: data.goldDrop
+                });
 
-            setTimeout(() => {
-                removeMonster(data.monsterId);
-            }, 5000);
+                setTimeout(() => {
+                    removeMonster(data.monsterId);
+                }, 5000);
+            }
         };
 
         const handleMonsterRespawned = (data: any) => {
-            // Re-add monster to state (it was removed after death)
+            // Chỉ thêm monster nếu thuộc map hiện tại
             const state = useGameStore.getState();
-            const newMonsters = new Map(state.monsters);
-            newMonsters.set(data.monsterId, {
-                ...data,
-                isDead: false,
-                hp: data.maxHp
-            });
-            setMonsters(newMonsters);
+            const currentMap = state.currentMapId;
+            
+            // Extract mapId from monsterId (format: map2-slime-1-ch1 -> map2)
+            const monsterMapId = data.monsterId.split('-')[0];
+            
+            // Chỉ add monster nếu đang ở đúng map
+            if (monsterMapId === currentMap) {
+                const newMonsters = new Map(state.monsters);
+                newMonsters.set(data.monsterId, {
+                    ...data,
+                    isDead: false,
+                    hp: data.maxHp
+                });
+                setMonsters(newMonsters);
+                console.log(`[Monster] Respawned ${data.name} on ${currentMap}`);
+            } else {
+                console.log(`[Monster] Ignored respawn of ${data.name} (on ${monsterMapId}, player on ${currentMap})`);
+            }
         };
 
         const handleMonsterAttackedPlayer = (data: any) => {

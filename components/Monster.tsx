@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useGameStore } from '@/lib/store';
+import { calculatePlayerDistance } from '@/lib/skinHelper';
 
 interface MonsterProps {
     monsterId: string;
@@ -43,10 +44,15 @@ const Monster: React.FC<MonsterProps> = ({
             // Get fresh player position from store (not from props/dependencies)
             const state = useGameStore.getState();
             const currentPlayerPos = state.playerPosition;
+            const currentSkin = state.user?.skin || 'knight';
             
-            const distance = Math.sqrt(
-                Math.pow(currentPlayerPos.x - x, 2) + 
-                Math.pow(currentPlayerPos.y - y, 2)
+            // Tính khoảng cách từ trung tâm thực sự của nhân vật
+            const distance = calculatePlayerDistance(
+                currentSkin,
+                currentPlayerPos.x,
+                currentPlayerPos.y,
+                x,
+                y
             );
 
             // Enable PK mode when player enters aggro range

@@ -845,7 +845,6 @@ app.prepare().then(() => {
                     baseSkillDamage,
                     playerAttack,
                     totalDamage,
-                    attackWithBonus: attackWithBonus.toFixed(2),
                     finalDamage
                 });
 
