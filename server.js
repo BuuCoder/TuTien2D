@@ -9,6 +9,7 @@ const db = require('./lib/db');
 const { verifyToken } = require('./lib/jwt');
 const rateLimiter = require('./lib/rateLimiter');
 const validator = require('./lib/validator');
+const cache = require('./lib/cache');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -40,7 +41,14 @@ app.prepare().then(() => {
         cors: {
             origin: "*",
             methods: ["GET", "POST"]
-        }
+        },
+        // Performance optimizations
+        pingTimeout: 60000,
+        pingInterval: 25000,
+        upgradeTimeout: 30000,
+        maxHttpBufferSize: 1e6, // 1MB
+        transports: ['websocket', 'polling'],
+        allowEIO3: true
     });
 
     const channels = {
@@ -79,10 +87,10 @@ app.prepare().then(() => {
         });
     });
 
-    // Cleanup rate limiter mỗi 5 phút
+    // Cleanup rate limiter mỗi 1 phút (thay vì 5 phút)
     setInterval(() => {
         rateLimiter.cleanup();
-    }, 5 * 60 * 1000);
+    }, 60 * 1000);
 
     io.on('connection', (socket) => {
         console.log('Client connected:', socket.id);
@@ -173,6 +181,9 @@ app.prepare().then(() => {
             userSessions.set(userId, { socketId: socket.id, username });
             socket.emit('session_validated', { success: true });
             console.log(`[Session Registered] User ${userId} (${username})`);
+            
+            // Invalidate cache khi user login (để load stats mới)
+            cache.delete(`user_stats:${userId}`);
         });
 
         // Join channel
@@ -663,21 +674,15 @@ app.prepare().then(() => {
                 console.error('Error saving chat:', err);
             }
 
-            // Broadcast to ALL players on the same map (including sender for chat bubbles)
-            io.sockets.sockets.forEach((clientSocket) => {
-                // Get player data from channels to check their map
-                let playerMapId = null;
-                for (const channelId of Object.keys(channels)) {
-                    const player = channels[channelId].get(clientSocket.id);
-                    if (player) {
-                        playerMapId = player.mapId;
-                        break;
+            // Broadcast to players on the same map (optimized)
+            // Chỉ loop qua players trong channel hiện tại thay vì tất cả sockets
+            const playersInChannel = channels[currentChannel];
+            playersInChannel.forEach((player, socketId) => {
+                if (player.mapId === mapId) {
+                    const targetSocket = io.sockets.sockets.get(socketId);
+                    if (targetSocket) {
+                        targetSocket.emit('chat_message', chatMessage);
                     }
-                }
-
-                // Send message to all players on the same map
-                if (playerMapId === mapId) {
-                    clientSocket.emit('chat_message', chatMessage);
                 }
             });
 
@@ -816,12 +821,20 @@ app.prepare().then(() => {
             if (!monster || monster.isDead) return;
 
             try {
-                // Lấy attack từ DB (đã có skin bonus)
-                const [statsRows] = await db.query(
-                    'SELECT attack FROM user_stats WHERE user_id = ?',
-                    [userId]
-                );
-                const playerAttack = statsRows[0]?.attack || 10;
+                // Lấy attack từ cache hoặc DB (đã có skin bonus)
+                const cacheKey = `user_stats:${userId}`;
+                let playerAttack = cache.get(cacheKey)?.attack;
+                
+                if (!playerAttack) {
+                    const [statsRows] = await db.query(
+                        'SELECT attack FROM user_stats WHERE user_id = ?',
+                        [userId]
+                    );
+                    playerAttack = statsRows[0]?.attack || 10;
+                    
+                    // Cache for 2 minutes
+                    cache.set(cacheKey, { attack: playerAttack }, 120000);
+                }
 
                 // Định nghĩa base damage cho các skill
                 const skillBaseDamage = {
