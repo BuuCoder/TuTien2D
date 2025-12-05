@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "node server.js",
-    "build": "next build --webpack",
-    "build:clean": "next build --webpack",
-    "build:obfuscate": "next build --webpack && node scripts/obfuscate-build.js",
+    "build": "next build",
+    "build:clean": "next build",
+    "build:obfuscate": "next build && node scripts/obfuscate-build.js",
     "start": "cross-env NODE_ENV=production node server.js",
     "lint": "eslint"
   },
