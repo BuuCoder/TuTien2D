@@ -69,7 +69,7 @@ export const SKINS: Record<string, SkinData> = {
         assetPath: '/assets/assassin',
         rarity: 'epic',
         isDefault: false,
-        displaySize: 300,        // Kích thước lớn hơn để hiển thị chi tiết
+        displaySize: 280,        // Kích thước lớn hơn để hiển thị chi tiết
         centerOffset: { x: 0, y: 118 }, // Trung tâm thực sự của nhân vật (chân nhân vật, (300-64)/2 = 118)
         stats: {
             attackBonus: 300,    // +300% Attack
