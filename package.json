@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "node server.js",
     "build": "next build",
-    "build:clean": "next build",
-    "build:obfuscate": "next build && node scripts/obfuscate-build.js",
+    "clean": "node scripts/clean-cache.js",
+    "build:clean": "npm run clean && next build",
+    "build:obfuscate": "npm run clean && next build && node scripts/obfuscate-build.js",
     "start": "cross-env NODE_ENV=production node server.js",
     "lint": "eslint"
   },
