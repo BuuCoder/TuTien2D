@@ -101,7 +101,7 @@ const OtherPlayerComponent = memo(({ player, playerPosition, socket, user, activ
                 transform: 'translate(-50%, -50%)',
                 color: activePKSessions.includes(player.id) ? '#e74c3c' : '#aaa',
                 textShadow: activePKSessions.includes(player.id)
-                    ? '0 0 8px rgba(231, 76, 60, 0.8), 1px 1px 2px black'
+                    ? '0 0 8px rgba(231, 76, 60, 1), 1px 1px 2px black'
                     : '1px 1px 2px black',
                 fontSize: '12px',
                 whiteSpace: 'nowrap',
@@ -115,9 +115,9 @@ const OtherPlayerComponent = memo(({ player, playerPosition, socket, user, activ
             {player.hp !== undefined && player.maxHp && activePKSessions.includes(player.id) && (
                 <div style={{
                     position: 'absolute',
-                    top: '-22px',
+                    top: 'calc(50% - 35px)',
                     left: '50%',
-                    transform: 'translateX(-50%)',
+                    transform: 'translate(-50%, -50%)',
                     width: '60px',
                     height: '6px',
                     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -137,12 +137,12 @@ const OtherPlayerComponent = memo(({ player, playerPosition, socket, user, activ
             {isNearby && !activePKSessions.includes(player.id) && activePKSessions.length === 0 && (
                 <div style={{
                     position: 'absolute',
-                    top: '70px',
+                    top: 'calc(50% - 70px)',
                     left: '50%',
-                    transform: 'translateX(-50%)',
+                    transform: 'translate(-50%, -50%)',
                     display: 'flex',
                     gap: '5px',
-                    zIndex: 1001
+                    zIndex: 2001
                 }}>
                     <button
                         onClick={() => sendFriendRequest(
@@ -191,11 +191,11 @@ const OtherPlayerComponent = memo(({ player, playerPosition, socket, user, activ
             {activePKSessions.includes(player.id) && (
                 <div style={{
                     position: 'absolute',
-                    top: '70px',
+                    top: 'calc(50% - 70px)',
                     left: '50%',
-                    transform: 'translateX(-50%)',
+                    transform: 'translate(-50%, -50%)',
                     padding: '4px 8px',
-                    backgroundColor: 'rgba(231, 76, 60, 0.9)',
+                    backgroundColor: 'rgba(231, 76, 60, 1)',
                     color: 'white',
                     border: '1px solid #c0392b',
                     borderRadius: '4px',
@@ -205,7 +205,7 @@ const OtherPlayerComponent = memo(({ player, playerPosition, socket, user, activ
                     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                     pointerEvents: 'none'
                 }}>
-                    ⚔️ Đang PK
+                    ⚔️ PK
                 </div>
             )}
         </div>
