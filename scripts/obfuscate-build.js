@@ -9,19 +9,29 @@ const path = require('path');
 
 const BUILD_DIR = path.join(__dirname, '..', '.next', 'static', 'chunks');
 
-// Obfuscation options
+// Files to SKIP obfuscation (system files that break if obfuscated)
+const SKIP_PATTERNS = [
+    'webpack',           // Webpack runtime
+    'turbopack',         // Turbopack runtime
+    'framework',         // Next.js framework
+    'main-app',          // Main app bundle
+    'polyfills',         // Polyfills
+    'react-refresh',     // React refresh
+];
+
+// Obfuscation options (reduced intensity to prevent breaking)
 const OBFUSCATION_OPTIONS = {
     compact: true,
     controlFlowFlattening: true,
-    controlFlowFlatteningThreshold: 0.75,
+    controlFlowFlatteningThreshold: 0.5,  // Reduced from 0.75
     deadCodeInjection: true,
-    deadCodeInjectionThreshold: 0.4,
+    deadCodeInjectionThreshold: 0.3,      // Reduced from 0.4
     debugProtection: false,
     disableConsoleOutput: true,
     identifierNamesGenerator: 'hexadecimal',
     log: false,
-    numbersToExpressions: true,
-    renameGlobals: false,
+    numbersToExpressions: false,          // Disabled to prevent getter issues
+    renameGlobals: false,                 // Keep false for compatibility
     selfDefending: true,
     simplify: true,
     splitStrings: true,
@@ -32,32 +42,44 @@ const OBFUSCATION_OPTIONS = {
     stringArrayIndexShift: true,
     stringArrayRotate: true,
     stringArrayShuffle: true,
-    stringArrayWrappersCount: 2,
+    stringArrayWrappersCount: 1,          // Reduced from 2
     stringArrayWrappersChainedCalls: true,
     stringArrayThreshold: 0.75,
-    transformObjectKeys: true,
+    transformObjectKeys: false,           // Disabled to prevent getter issues
     unicodeEscapeSequence: false
 };
 
 function obfuscateFile(filePath) {
     try {
-        const code = fs.readFileSync(filePath, 'utf8');
-        
-        // Skip if already obfuscated
-        if (code.includes('_0x')) {
-            console.log(`[Obfuscate] Skipping (already obfuscated): ${path.basename(filePath)}`);
+        const fileName = path.basename(filePath);
+
+        // Check if file should be skipped (system files)
+        const shouldSkip = SKIP_PATTERNS.some(pattern =>
+            fileName.toLowerCase().includes(pattern.toLowerCase())
+        );
+
+        if (shouldSkip) {
+            console.log(`[Obfuscate] Skipping (system file): ${fileName}`);
             return false;
         }
-        
-        console.log(`[Obfuscate] Processing: ${path.basename(filePath)}`);
-        
+
+        const code = fs.readFileSync(filePath, 'utf8');
+
+        // Skip if already obfuscated
+        if (code.includes('_0x')) {
+            console.log(`[Obfuscate] Skipping (already obfuscated): ${fileName}`);
+            return false;
+        }
+
+        console.log(`[Obfuscate] Processing: ${fileName}`);
+
         const obfuscated = JavaScriptObfuscator.obfuscate(code, OBFUSCATION_OPTIONS);
-        
+
         fs.writeFileSync(filePath, obfuscated.getObfuscatedCode(), 'utf8');
-        
-        console.log(`[Obfuscate] ✓ Done: ${path.basename(filePath)}`);
+
+        console.log(`[Obfuscate] ✓ Done: ${fileName}`);
         return true;
-        
+
     } catch (error) {
         console.error(`[Obfuscate] ✗ Error: ${path.basename(filePath)} - ${error.message.split('\n')[0]}`);
         console.log(`[Obfuscate] ⚠ Skipping file due to error`);
@@ -68,7 +90,7 @@ function obfuscateFile(filePath) {
 function obfuscateDirectory(dir) {
     if (!fs.existsSync(dir)) {
         console.error(`[Obfuscate] Directory not found: ${dir}`);
-        return;
+        return 0;
     }
 
     const files = fs.readdirSync(dir);
